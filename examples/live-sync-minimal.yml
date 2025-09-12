@@ -20,3 +20,4 @@ jobs:
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+

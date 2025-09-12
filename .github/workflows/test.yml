@@ -31,8 +31,8 @@ jobs:
       - name: Check formatting
         run: npm run format:check
       
-      - name: Run tests
-        run: npm test
+      - name: Run tests with coverage
+        run: npm run test:coverage
       
       - name: Upload coverage
         if: always()
@@ -40,6 +40,9 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
+      
+      - name: Build action for testing
+        run: npm run build
       
       - name: Test action (dry-run staging)
         uses: ./
