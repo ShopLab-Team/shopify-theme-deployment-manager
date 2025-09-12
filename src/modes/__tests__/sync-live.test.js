@@ -47,10 +47,7 @@ describe('sync-live', () => {
 
       git.getCurrentBranch.mockResolvedValue('main');
       git.hasUncommittedChanges.mockResolvedValue(true);
-      git.getChangedFiles.mockResolvedValue([
-        'templates/product.json',
-        'locales/en.default.json',
-      ]);
+      git.getChangedFiles.mockResolvedValue(['templates/product.json', 'locales/en.default.json']);
       git.createOrCheckoutBranch.mockResolvedValue();
       git.pushToRemoteBranch.mockResolvedValue();
       git.createPullRequest.mockResolvedValue({

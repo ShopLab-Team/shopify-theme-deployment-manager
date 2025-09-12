@@ -6,7 +6,12 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Testing
-coverage/
+# Keep coverage folder but ignore all files inside it
+!coverage/
+!coverage/.gitkeep
+coverage/*
+
+
 *.lcov
 .nyc_output/
 
