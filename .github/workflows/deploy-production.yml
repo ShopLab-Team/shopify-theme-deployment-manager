@@ -1,0 +1,116 @@
+name: Deploy – Production
+
+on:
+  push:
+    branches: ["main", "master"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode'
+        required: false
+        default: false
+        type: boolean
+      skip_backup:
+        description: 'Skip backup creation (not recommended)'
+        required: false
+        default: false
+        type: boolean
+      version_strategy:
+        description: 'Version bump strategy'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.preview_url }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies & build
+        run: |
+          npm ci
+          npm run build
+      
+      - name: Deploy to PRODUCTION
+        id: deploy
+        uses: ./
+        with:
+          mode: production
+          store: ${{ vars.SHOPIFY_STORE }}
+          build_enabled: true
+          build_node_version: '20.x'
+          build_package_manager: npm
+          build_command: 'npm ci && npm run build'
+          backup_enabled: ${{ !github.event.inputs.skip_backup }}
+          backup_retention: 3
+          backup_timezone: 'Asia/Manila'
+          deploy_ignore_json_on_prod: true
+          deploy_allow_live_push: false
+          versioning_enabled: true
+          versioning_strategy: ${{ github.event.inputs.version_strategy || 'patch' }}
+          dry_run: ${{ github.event.inputs.dry_run }}
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Create Release
+        if: success() && github.event.inputs.dry_run != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.deploy.outputs.version }}';
+            const themeId = '${{ steps.deploy.outputs.theme_id }}';
+            
+            if (version) {
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: `v${version}`,
+                name: `Production Release v${version}`,
+                body: `Deployed to production theme ${themeId}`,
+                draft: false,
+                prerelease: false,
+                target_commitish: context.sha
+              });
+            }
+      
+      - name: Update deployment status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const url = '${{ steps.deploy.outputs.preview_url }}';
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment?.id || 'production',
+              state: status === 'success' ? 'success' : 'failure',
+              environment_url: url,
+              description: `Production deployment ${status}`
+            });
+

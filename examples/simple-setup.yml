@@ -1,0 +1,52 @@
+name: Simple Theme Deployment
+
+# This workflow demonstrates a basic setup for staging and production deployments
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Theme
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Determine deployment mode based on branch
+      - name: Set deployment mode
+        id: mode
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "mode=production" >> $GITHUB_OUTPUT
+            echo "theme_id=${{ secrets.PRODUCTION_THEME_ID }}" >> $GITHUB_OUTPUT
+          else
+            echo "mode=staging" >> $GITHUB_OUTPUT
+            echo "theme_id=${{ secrets.STAGING_THEME_ID }}" >> $GITHUB_OUTPUT
+          fi
+      
+      # Deploy theme
+      - name: Deploy to Shopify
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: ${{ steps.mode.outputs.mode }}
+          # Store can be provided as plain text or omitted if using SHOPIFY_STORE_URL secret
+          store: my-store.myshopify.com  # Optional if using SHOPIFY_STORE_URL secret
+          
+          # Enable backups only for production
+          backup.enabled: ${{ steps.mode.outputs.mode == 'production' }}
+          
+          # Enable versioning only for production
+          versioning.enabled: ${{ steps.mode.outputs.mode == 'production' }}
+          
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          # SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Alternative to 'store' input
+          STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
+          PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

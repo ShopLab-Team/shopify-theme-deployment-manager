@@ -1,0 +1,209 @@
+name: 'Shopify Theme Deploy & Sync'
+description: 'Standardized Shopify theme deployments for staging and production with backups, selective uploads, and live sync'
+author: 'shoplab-actions'
+branding:
+  icon: 'package'
+  color: 'green'
+
+inputs:
+  # Core Configuration
+  mode:
+    description: 'Deployment mode: staging, production, or sync-live'
+    required: true
+  
+  store:
+    description: 'Shopify store domain (e.g., your-store.myshopify.com or prefix). Can also be set as SHOPIFY_STORE_URL secret.'
+    required: false
+  
+  # Branch Configuration
+  branch_staging:
+    description: 'Branch name for staging deployments'
+    required: false
+    default: 'staging'
+  
+  branch_production:
+    description: 'Branch names for production deployments (comma-separated)'
+    required: false
+    default: 'main,master'
+  
+  # Build Configuration
+  build_enabled:
+    description: 'Enable build step'
+    required: false
+    default: 'true'
+  
+  build_node_version:
+    description: 'Node version to use'
+    required: false
+    default: '20.x'
+  
+  build_package_manager:
+    description: 'Package manager: npm, yarn, or pnpm'
+    required: false
+    default: 'npm'
+  
+  build_command:
+    description: 'Build command to run'
+    required: false
+    default: 'npm ci && npm run build'
+  
+  build_cwd:
+    description: 'Working directory for build'
+    required: false
+    default: '.'
+  
+  # JSON Pull Configuration
+  json_pull_globs:
+    description: 'Glob patterns for JSON files to pull from live theme (newline-separated)'
+    required: false
+    default: |
+      templates/*.json
+      locales/*.json
+      config/settings_data.json
+  
+  # Push Configuration
+  push_extra_ignore:
+    description: 'Additional glob patterns to ignore during push (newline-separated)'
+    required: false
+    default: ''
+  
+  push_nodelete:
+    description: 'Prevent deletion of files on remote'
+    required: false
+    default: 'false'
+  
+  # Backup Configuration
+  backup_enabled:
+    description: 'Enable theme backups for production'
+    required: false
+    default: 'true'
+  
+  backup_retention:
+    description: 'Number of backups to retain'
+    required: false
+    default: '3'
+  
+  backup_prefix:
+    description: 'Prefix for backup theme names'
+    required: false
+    default: 'BACKUP_'
+  
+  backup_timezone:
+    description: 'Timezone for backup timestamps'
+    required: false
+    default: 'Asia/Manila'
+  
+  # Deploy Configuration
+  deploy_ignore_json_on_prod:
+    description: 'Ignore JSON files on production deploy'
+    required: false
+    default: 'true'
+  
+  deploy_allow_live_push:
+    description: 'Allow pushing directly to live theme'
+    required: false
+    default: 'false'
+  
+  # Versioning Configuration
+  versioning_enabled:
+    description: 'Enable theme version tagging'
+    required: false
+    default: 'true'
+  
+  versioning_strategy:
+    description: 'Version bump strategy: patch, minor, or major'
+    required: false
+    default: 'patch'
+  
+  # Sync Configuration
+  sync_only_globs:
+    description: 'Glob patterns for sync mode (newline-separated)'
+    required: false
+    default: |
+      templates/*.json
+      locales/*.json
+      config/settings_data.json
+  
+  sync_branch:
+    description: 'Branch name for sync commits'
+    required: false
+    default: 'remote_changes'
+  
+  sync_commit_message:
+    description: 'Commit message for sync'
+    required: false
+    default: 'chore(sync): import live JSON changes'
+  
+  sync_output:
+    description: 'Sync output mode: pr or push'
+    required: false
+    default: 'pr'
+  
+  # Optional Features
+  dry_run:
+    description: 'Run in dry-run mode (no actual changes)'
+    required: false
+    default: 'false'
+
+outputs:
+  theme_id:
+    description: 'ID of the deployed theme'
+    value: ${{ steps.deploy.outputs.theme_id }}
+  
+  theme_name:
+    description: 'Name of the deployed theme'
+    value: ${{ steps.deploy.outputs.theme_name }}
+  
+  preview_url:
+    description: 'Preview URL for the deployed theme'
+    value: ${{ steps.deploy.outputs.preview_url }}
+  
+  editor_url:
+    description: 'Editor URL for the deployed theme'
+    value: ${{ steps.deploy.outputs.editor_url }}
+  
+  version:
+    description: 'Version tag after deployment'
+    value: ${{ steps.deploy.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.build_node_version }}
+        node-version-file: '.nvmrc'
+    
+    - name: Run deployment
+      id: deploy
+      shell: bash
+      run: |
+        echo "Starting deployment in ${{ inputs.mode }} mode"
+        node ${{ github.action_path }}/dist/index.js
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_STORE: ${{ inputs.store }}
+        INPUT_BRANCH_STAGING: ${{ inputs.branch_staging }}
+        INPUT_BRANCH_PRODUCTION: ${{ inputs.branch_production }}
+        INPUT_BUILD_ENABLED: ${{ inputs.build_enabled }}
+        INPUT_BUILD_NODE_VERSION: ${{ inputs.build_node_version }}
+        INPUT_BUILD_PACKAGE_MANAGER: ${{ inputs.build_package_manager }}
+        INPUT_BUILD_COMMAND: ${{ inputs.build_command }}
+        INPUT_BUILD_CWD: ${{ inputs.build_cwd }}
+        INPUT_JSON_PULL_GLOBS: ${{ inputs.json_pull_globs }}
+        INPUT_PUSH_EXTRA_IGNORE: ${{ inputs.push_extra_ignore }}
+        INPUT_PUSH_NODELETE: ${{ inputs.push_nodelete }}
+        INPUT_BACKUP_ENABLED: ${{ inputs.backup_enabled }}
+        INPUT_BACKUP_RETENTION: ${{ inputs.backup_retention }}
+        INPUT_BACKUP_PREFIX: ${{ inputs.backup_prefix }}
+        INPUT_BACKUP_TIMEZONE: ${{ inputs.backup_timezone }}
+        INPUT_DEPLOY_IGNORE_JSON_ON_PROD: ${{ inputs.deploy_ignore_json_on_prod }}
+        INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
+        INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
+        INPUT_VERSIONING_STRATEGY: ${{ inputs.versioning_strategy }}
+        INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
+        INPUT_SYNC_BRANCH: ${{ inputs.sync_branch }}
+        INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
+        INPUT_SYNC_OUTPUT: ${{ inputs.sync_output }}
+        INPUT_DRY_RUN: ${{ inputs.dry_run }}
