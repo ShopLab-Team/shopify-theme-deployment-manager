@@ -149,13 +149,23 @@ async function listThemes(token, store) {
 async function getLiveTheme(token, store) {
   try {
     const themes = await listThemes(token, store);
-    const liveTheme = themes.find((theme) => theme.role === 'main');
+
+    // Debug: Log all theme roles to understand what's available
+    themes.forEach((theme) => {
+      core.debug(`Theme: ${theme.name} (ID: ${theme.id}, Role: ${theme.role})`);
+    });
+
+    // The published theme has role 'main' in Shopify
+    const liveTheme = themes.find((theme) => theme.role === 'main' || theme.role === 'live');
 
     if (liveTheme) {
       core.info(`Found live theme: ${liveTheme.name} (ID: ${liveTheme.id})`);
       return liveTheme;
     } else {
       core.warning('No live theme found in the store');
+      core.warning(
+        `Available themes have the following roles: ${themes.map((t) => t.role).join(', ')}`
+      );
       return null;
     }
   } catch (error) {
