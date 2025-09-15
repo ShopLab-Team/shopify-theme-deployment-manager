@@ -130,6 +130,7 @@ async function stagingDeploy(config) {
     const pushOptions = {
       ignore: config.push.extraIgnore || [],
       nodelete: config.push.nodelete,
+      force: true,
     };
 
     await pushThemeFiles(

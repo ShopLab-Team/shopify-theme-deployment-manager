@@ -10,7 +10,9 @@ const {
   hasUncommittedChanges,
   createOrCheckoutBranch,
   getChangedFiles,
+  setupSyncBranch,
 } = require('../utils/git');
+const fs = require('fs').promises;
 
 /**
  * Sync live theme changes back to repository
@@ -65,6 +67,32 @@ async function syncLive(config) {
       await createOrCheckoutBranch(config.sync.branch, originalBranch);
       core.endGroup();
     }
+
+    core.startGroup('🌿 Setting up sync branch');
+    await setupSyncBranch(config.sync.branch, originalBranch);
+    core.endGroup();
+
+    core.startGroup('📝 Creating .shopifyignore to exclude non-theme files');
+    const shopifyIgnoreContent = [
+      '.git',
+      '.github',
+      '.vscode',
+      '*.config.js',
+      'package.json',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+      'node_modules',
+      '.gitignore',
+      'README.md',
+      'LICENSE',
+      '.env',
+      'dist',
+      'coverage',
+    ].join('\n');
+    await fs.writeFile('.shopifyignore', shopifyIgnoreContent);
+    core.info('Created .shopifyignore file.');
+    core.endGroup();
 
     // Step 4: Pull theme files
     core.startGroup('📥 Pulling files from live theme');

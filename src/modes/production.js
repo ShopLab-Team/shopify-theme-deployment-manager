@@ -141,6 +141,7 @@ async function productionDeploy(config) {
         ignore: ignorePatterns,
         nodelete: config.push.nodelete,
         allowLive: productionTheme.role === 'main',
+        force: true,
       });
 
       // Phase B: Push only en.default.json
@@ -150,6 +151,7 @@ async function productionDeploy(config) {
         only: ['locales/en.default.json'],
         nodelete: true,
         allowLive: productionTheme.role === 'main',
+        force: true,
       });
     } else {
       // Push everything
@@ -158,6 +160,7 @@ async function productionDeploy(config) {
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
         nodelete: config.push.nodelete,
         allowLive: productionTheme.role === 'main',
+        force: true,
       });
     }
 

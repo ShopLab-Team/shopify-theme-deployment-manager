@@ -40284,6 +40284,7 @@ async function productionDeploy(config) {
         ignore: ignorePatterns,
         nodelete: config.push.nodelete,
         allowLive: productionTheme.role === 'main',
+        force: true,
       });
 
       // Phase B: Push only en.default.json
@@ -40293,6 +40294,7 @@ async function productionDeploy(config) {
         only: ['locales/en.default.json'],
         nodelete: true,
         allowLive: productionTheme.role === 'main',
+        force: true,
       });
     } else {
       // Push everything
@@ -40301,6 +40303,7 @@ async function productionDeploy(config) {
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
         nodelete: config.push.nodelete,
         allowLive: productionTheme.role === 'main',
+        force: true,
       });
     }
 
@@ -40520,6 +40523,7 @@ async function stagingDeploy(config) {
     const pushOptions = {
       ignore: config.push.extraIgnore || [],
       nodelete: config.push.nodelete,
+      force: true,
     };
 
     await pushThemeFiles(
@@ -40604,7 +40608,9 @@ const {
   hasUncommittedChanges,
   createOrCheckoutBranch,
   getChangedFiles,
+  setupSyncBranch,
 } = __nccwpck_require__(2935);
+const fs = (__nccwpck_require__(9896).promises);
 
 /**
  * Sync live theme changes back to repository
@@ -40659,6 +40665,32 @@ async function syncLive(config) {
       await createOrCheckoutBranch(config.sync.branch, originalBranch);
       core.endGroup();
     }
+
+    core.startGroup('🌿 Setting up sync branch');
+    await setupSyncBranch(config.sync.branch, originalBranch);
+    core.endGroup();
+
+    core.startGroup('📝 Creating .shopifyignore to exclude non-theme files');
+    const shopifyIgnoreContent = [
+      '.git',
+      '.github',
+      '.vscode',
+      '*.config.js',
+      'package.json',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+      'node_modules',
+      '.gitignore',
+      'README.md',
+      'LICENSE',
+      '.env',
+      'dist',
+      'coverage',
+    ].join('\n');
+    await fs.writeFile('.shopifyignore', shopifyIgnoreContent);
+    core.info('Created .shopifyignore file.');
+    core.endGroup();
 
     // Step 4: Pull theme files
     core.startGroup('📥 Pulling files from live theme');
@@ -42647,6 +42679,11 @@ async function pushThemeFiles(token, store, themeId, options = {}) {
 
   // Non-interactive mode
   args.push('--json');
+
+  // Add --force flag
+  if (options.force) {
+    args.push('--force');
+  }
 
   const execOptions = {
     env: {

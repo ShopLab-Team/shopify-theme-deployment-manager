@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+*.config.js
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+node_modules
+.gitignore
+README.md
+LICENSE
+.env
+dist
+coverage

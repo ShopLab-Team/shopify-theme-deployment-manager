@@ -10,7 +10,17 @@ jest.mock('@actions/core');
 jest.mock('@actions/exec');
 jest.mock('../../utils/shopify-cli');
 jest.mock('../../utils/slack');
-jest.mock('../../utils/git');
+jest.mock('../../utils/git', () => ({
+  getCurrentBranch: jest.fn(),
+  setupSyncBranch: jest.fn(),
+  getChangedFiles: jest.fn(),
+  commitChanges: jest.fn(),
+  pushChanges: jest.fn(),
+  createPullRequest: jest.fn(),
+  hasUncommittedChanges: jest.fn(),
+  createOrCheckoutBranch: jest.fn(),
+  pushToRemoteBranch: jest.fn(),
+}));
 
 describe('sync-live', () => {
   describe('syncLive', () => {
