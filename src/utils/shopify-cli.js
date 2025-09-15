@@ -319,6 +319,11 @@ async function pushThemeFiles(token, store, themeId, options = {}) {
   // Non-interactive mode
   args.push('--json');
 
+  // Add --force flag
+  if (options.force) {
+    args.push('--force');
+  }
+
   const execOptions = {
     env: {
       ...process.env,
