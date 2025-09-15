@@ -15,6 +15,7 @@ jobs:
         with:
           mode: sync-live
           sync_output: pr  # Create PR for review
+          # Uses defaults: sync_branch: remote_changes, sync_target_branch: staging
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}

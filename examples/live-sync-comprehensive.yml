@@ -76,15 +76,17 @@ jobs:
         id: sync
         uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
+          # Workflow inputs
           mode: sync-live
           
           # Store configuration
-          store: ${{ vars.SHOPIFY_STORE || secrets.SHOPIFY_STORE_URL }}
+          store: ${{ secrets.SHOPIFY_STORE_URL }}
           
           # Sync configuration
           sync_output: ${{ inputs.sync_mode || 'pr' }}
-          sync_branch: 'sync/live-theme-${{ github.run_number }}'
-          sync_commit_message: 'feat(sync): import live theme changes from ${{ vars.SHOPIFY_STORE }}'
+          sync_branch: 'remote_changes'  # Always use the same branch for PR updates
+          sync_target_branch: 'staging'   # Target branch for the PR
+          sync_commit_message: 'feat(sync): import live theme changes'
           
           # What to sync - JSON files and settings
           sync_only_globs: |
@@ -110,6 +112,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       
       # Create detailed PR comment with sync results
+      # Note: If PR already exists, this adds a new comment to track each sync
       - name: Comment on PR
         if: steps.sync.outputs.pull_request_url && !inputs.dry_run
         uses: actions/github-script@v6
@@ -150,7 +153,7 @@ jobs:
               body: comment
             });
       
-      # Add labels to PR
+      # Add labels to PR (if not already present)
       - name: Label PR
         if: steps.sync.outputs.pull_request_url && !inputs.dry_run
         uses: actions/github-script@v6
@@ -160,12 +163,17 @@ jobs:
             const prUrl = '${{ steps.sync.outputs.pull_request_url }}';
             const prNumber = prUrl.split('/').pop();
             
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: parseInt(prNumber),
-              labels: ['theme-sync', 'automated', 'review-required']
-            });
+            // Add labels (will be ignored if already present)
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                labels: ['theme-sync', 'automated', 'review-required']
+              });
+            } catch (error) {
+              console.log('Labels might already exist:', error.message);
+            }
       
       # Post to Slack with detailed sync results
       - name: Slack Notification (Custom)

@@ -26,11 +26,15 @@ jobs:
         uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: sync-live
-          # Store can be provided as input or use SHOPIFY_STORE_URL secret
-          store: ${{ vars.SHOPIFY_STORE }}  # Optional if using SHOPIFY_STORE_URL secret
+          # Provide store URL via input
+          store: ${{ secrets.SHOPIFY_STORE_URL }}
           
           # Create PR instead of direct push (recommended)
           sync_output: pr
+          
+          # Optional: customize branch names (defaults shown)
+          # sync_branch: remote_changes      # Branch to commit changes to
+          # sync_target_branch: staging      # Target branch for PR
           
           # Optional: customize what to sync (defaults to JSON files)
           # sync_only_globs: |
@@ -40,7 +44,6 @@ jobs:
         
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
-          # SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Alternative to 'store' input
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       
