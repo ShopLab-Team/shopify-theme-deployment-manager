@@ -91,12 +91,16 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `json.pull_globs` | JSON files to pull from live theme | `templates/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
-| `json.sync_on_staging` | Enable JSON sync from live theme during staging deployment | `true` |
+| `json.pull_globs` | JSON files to pull from source theme (production or live) | `templates/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
+| `json.sync_on_staging` | Enable JSON sync from source theme during staging deployment | `true` |
 | `push.extra_ignore` | Additional patterns to ignore during push | - |
 | `push.nodelete` | Prevent deletion of remote files | `false` |
 
-> **Note**: You can also control JSON sync via the `SYNC_JSON_ON_STAGING` environment variable
+> **Note**: When JSON sync is enabled on staging:
+> - If `PRODUCTION_THEME_ID` is provided, it will be used as the source for JSON files
+> - Otherwise, the action will look for a published theme (role: main/live)
+> - This is particularly useful for development stores where there might not be a published theme
+> - You can also control JSON sync via the `SYNC_JSON_ON_STAGING` environment variable
 
 #### Backup Configuration
 

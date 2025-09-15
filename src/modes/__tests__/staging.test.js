@@ -9,6 +9,7 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const {
   getLiveTheme,
+  getThemeById,
   ensureThemeExists,
   pullThemeFiles,
   pushThemeFiles,
@@ -157,7 +158,7 @@ describe('staging', () => {
       await stagingDeploy(configNoPull);
 
       expect(buildAssets).toHaveBeenCalled();
-      expect(getLiveTheme).toHaveBeenCalled(); // Always called to check for live theme
+      expect(getLiveTheme).not.toHaveBeenCalled(); // Not called when no globs
       expect(pullThemeFiles).not.toHaveBeenCalled(); // Not called when no globs
       expect(pushThemeFiles).toHaveBeenCalled();
     });
@@ -179,7 +180,7 @@ describe('staging', () => {
       await stagingDeploy(configNoSync);
 
       expect(buildAssets).toHaveBeenCalled();
-      expect(getLiveTheme).toHaveBeenCalled(); // Always called to check for live theme
+      expect(getLiveTheme).not.toHaveBeenCalled(); // Not called when syncOnStaging is false
       expect(pullThemeFiles).not.toHaveBeenCalled(); // Not called when syncOnStaging is false
       expect(pushThemeFiles).toHaveBeenCalled();
     });
@@ -358,6 +359,79 @@ describe('staging', () => {
       expect(core.setOutput).toHaveBeenCalledWith(
         'editor_url',
         expect.stringContaining('/admin/themes/987654')
+      );
+    });
+
+    it('should use production theme ID for JSON pull when provided', async () => {
+      const configWithProdId = {
+        ...mockConfig,
+        secrets: {
+          ...mockConfig.secrets,
+          productionThemeId: '555666', // Add production theme ID
+        },
+      };
+
+      const mockStagingTheme = { id: 987654, name: 'STAGING' };
+      const mockProductionTheme = { id: 555666, name: 'Production Theme' };
+
+      ensureThemeExists.mockResolvedValue(mockStagingTheme);
+      getThemeById.mockResolvedValue(mockProductionTheme);
+      buildAssets.mockResolvedValue();
+      pullThemeFiles.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 25, theme: mockStagingTheme });
+
+      await stagingDeploy(configWithProdId);
+
+      // Should call getThemeById with production theme ID
+      expect(getThemeById).toHaveBeenCalledWith('test-token', 'test-store', '555666');
+
+      // Should NOT call getLiveTheme since we have a production theme ID
+      expect(getLiveTheme).not.toHaveBeenCalled();
+
+      // Should pull from production theme
+      expect(pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '555666', // Should use production theme ID as string
+        ['templates/*.json', 'config/settings_data.json'],
+        '.'
+      );
+    });
+
+    it('should fallback to live theme when production theme ID not found', async () => {
+      const configWithProdId = {
+        ...mockConfig,
+        secrets: {
+          ...mockConfig.secrets,
+          productionThemeId: '999999', // Non-existent production theme ID
+        },
+      };
+
+      const mockStagingTheme = { id: 987654, name: 'STAGING' };
+      const mockLiveTheme = { id: 123456, name: 'Live Theme' };
+
+      ensureThemeExists.mockResolvedValue(mockStagingTheme);
+      getThemeById.mockResolvedValue(null); // Production theme not found
+      getLiveTheme.mockResolvedValue(mockLiveTheme);
+      buildAssets.mockResolvedValue();
+      pullThemeFiles.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 25, theme: mockStagingTheme });
+
+      await stagingDeploy(configWithProdId);
+
+      // Should try to get production theme first
+      expect(getThemeById).toHaveBeenCalledWith('test-token', 'test-store', '999999');
+
+      // Should fallback to getting live theme
+      expect(getLiveTheme).toHaveBeenCalledWith('test-token', 'test-store');
+
+      // Should pull from live theme
+      expect(pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456', // Should use live theme ID
+        ['templates/*.json', 'config/settings_data.json'],
+        '.'
       );
     });
   });
