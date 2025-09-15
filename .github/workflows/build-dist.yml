@@ -1,0 +1,60 @@
+# Automatically rebuild and commit dist when source changes
+# This ensures the action always has up-to-date compiled code
+
+name: Build Distribution
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Commit dist
+    runs-on: self-hosted
+    
+    # Only run on main repository, not on forks
+    if: github.repository == 'ShopLab-Team/shopify-theme-deployment-manager'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build distribution
+        run: npm run build
+      
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet dist/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push dist
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add dist/
+          git commit -m "chore: update compiled distribution [skip ci]"
+          git push

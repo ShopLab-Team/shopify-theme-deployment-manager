@@ -16,7 +16,7 @@ coverage/*
 .nyc_output/
 
 # Build outputs
-dist/
+# Note: dist/ is NOT ignored for GitHub Actions (must be committed)
 build/
 *.tsbuildinfo
 
