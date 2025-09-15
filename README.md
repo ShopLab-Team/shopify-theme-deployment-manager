@@ -200,7 +200,7 @@ To deploy to staging without syncing JSON files from the live theme:
 - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
   with:
     mode: staging
-    json.sync_on_staging: false  # Disable JSON sync
+    json_sync_on_staging: false  # Disable JSON sync
   env:
     SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
     STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
@@ -263,7 +263,7 @@ jobs:
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: sync-live
-          sync.output: pr  # Create PR for review
+          sync_output: pr  # Create PR for review
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}

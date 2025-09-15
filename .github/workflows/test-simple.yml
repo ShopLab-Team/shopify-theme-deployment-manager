@@ -1,0 +1,21 @@
+# Simple test workflow to verify GitHub Actions are working
+name: Simple Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Simple Test
+    runs-on: self-hosted
+    steps:
+      - name: Echo test
+        run: echo "GitHub Actions are working!"
+      
+      - name: Show event info
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Runner: ${{ runner.name }}"
