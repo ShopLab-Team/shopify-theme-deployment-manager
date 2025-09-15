@@ -60,6 +60,9 @@ inputs:
       templates/*.json
       locales/*.json
       config/settings_data.json
+      sections/*.json
+      snippets/*.json
+      templates/customers/*.json
   
   json_sync_on_staging:
     description: 'Whether to sync JSON files from live theme during staging deployments'
