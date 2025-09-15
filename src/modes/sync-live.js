@@ -10,7 +10,6 @@ const {
   hasUncommittedChanges,
   createOrCheckoutBranch,
   getChangedFiles,
-  setupSyncBranch,
 } = require('../utils/git');
 const fs = require('fs').promises;
 
@@ -61,16 +60,12 @@ async function syncLive(config) {
     const originalBranch = await getCurrentBranch();
     core.info(`Current branch: ${originalBranch}`);
 
-    // Step 3: Create or checkout sync branch
+    // Step 3: Create or checkout sync branch (only for PR mode)
     if (config.sync.output === 'pr') {
       core.startGroup('🌿 Setting up sync branch');
       await createOrCheckoutBranch(config.sync.branch, originalBranch);
       core.endGroup();
     }
-
-    core.startGroup('🌿 Setting up sync branch');
-    await setupSyncBranch(config.sync.branch, originalBranch);
-    core.endGroup();
 
     core.startGroup('📝 Creating .shopifyignore to exclude non-theme files');
     const shopifyIgnoreContent = [
