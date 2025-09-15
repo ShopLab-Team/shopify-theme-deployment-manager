@@ -91,7 +91,7 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `json.pull_globs` | JSON files to pull from source theme (production or live) | `templates/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
+| `json.pull_globs` | JSON files to pull from source theme (production or live) | `templates/*.json`<br>`templates/customers/*.json`<br>`sections/*.json`<br>`snippets/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
 | `json.sync_on_staging` | Enable JSON sync from source theme during staging deployment | `true` |
 | `push.extra_ignore` | Additional patterns to ignore during push | - |
 | `push.nodelete` | Prevent deletion of remote files | `false` |
@@ -129,7 +129,7 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `sync_only_globs` | Files to sync from live theme | Same as `json_pull_globs` |
+| `sync_only_globs` | Files to sync from live theme | `templates/*.json`<br>`templates/customers/*.json`<br>`sections/*.json`<br>`snippets/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
 | `sync_branch` | Branch for sync commits | `remote_changes` |
 | `sync_commit_message` | Commit message for sync | `chore(sync): import live JSON changes` |
 | `sync_output` | Sync output method (`pr` or `push`) | `pr` |

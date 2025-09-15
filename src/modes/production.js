@@ -130,7 +130,9 @@ async function productionDeploy(config) {
 
       const ignorePatterns = [
         'templates/*.json',
+        'templates/customers/*.json',
         'sections/*.json',
+        'snippets/*.json',
         'config/settings_data.json',
         'locales/*.json',
       ];

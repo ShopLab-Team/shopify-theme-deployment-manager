@@ -89,7 +89,9 @@ jobs:
           # What to sync - JSON files and settings
           sync_only_globs: |
             templates/*.json
+            templates/customers/*.json
             sections/*.json
+            snippets/*.json
             config/settings_data.json
             config/settings_schema.json
             locales/*.json
