@@ -40283,7 +40283,7 @@ async function productionDeploy(config) {
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
         ignore: ignorePatterns,
         nodelete: config.push.nodelete,
-        allowLive: productionTheme.role === 'main',
+        allowLive: true, // Always allow live push in production mode
         force: true,
       });
 
@@ -40293,7 +40293,7 @@ async function productionDeploy(config) {
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
         only: ['locales/en.default.json'],
         nodelete: true,
-        allowLive: productionTheme.role === 'main',
+        allowLive: true, // Always allow live push in production mode
         force: true,
       });
     } else {
@@ -40302,7 +40302,7 @@ async function productionDeploy(config) {
 
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
         nodelete: config.push.nodelete,
-        allowLive: productionTheme.role === 'main',
+        allowLive: true, // Always allow live push in production mode
         force: true,
       });
     }
