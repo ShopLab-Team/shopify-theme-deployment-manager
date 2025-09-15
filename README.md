@@ -1,4 +1,5 @@
 # 🚀 Shopify Theme Deploy & Sync Action
+[![Test](https://github.com/ShopLab-Team/shopify-theme-deployment-manager/actions/workflows/test.yml/badge.svg)](https://github.com/ShopLab-Team/shopify-theme-deployment-manager/actions/workflows/test.yml)
 
 A powerful GitHub Action for automated Shopify theme deployment with staging/production workflows, live theme synchronization, and comprehensive backup management.
 
