@@ -56,31 +56,31 @@ jobs:
           dry_run: ${{ inputs.dry_run }}
           
           # Build configuration
-          build.enabled: true
+          build_enabled: true
           build.node-version: 20
           build.package-manager: npm
-          build.command: |
+          build_command: |
             npm ci --production=false
             npm run build:production
             npm run test:theme
           
           # Backup configuration
-          backup.enabled: ${{ !inputs.skip_backup }}
-          backup.retention: 10
-          backup.prefix: 'PROD_BACKUP_'
-          backup.timezone: ${{ vars.TIMEZONE || 'UTC' }}
+          backup_enabled: ${{ !inputs.skip_backup }}
+          backup_retention: 10
+          backup_prefix: 'PROD_BACKUP_'
+          backup_timezone: ${{ vars.TIMEZONE || 'UTC' }}
           
           # Deployment configuration
-          deploy.ignore_json_on_prod: true
-          deploy.allow_live_push: false
+          deploy_ignore_json_on_prod: true
+          deploy_allow_live_push: false
           
           # Versioning configuration
-          versioning.enabled: true
-          versioning.strategy: ${{ inputs.version_strategy }}
+          versioning_enabled: true
+          versioning_strategy: ${{ inputs.version_strategy }}
           
           # Push configuration
-          push.nodelete: true
-          push.extra_ignore: |
+          push_nodelete: true
+          push_extra_ignore: |
             config/settings_data.json
             templates/customers/*.json
         

@@ -39,10 +39,10 @@ jobs:
           store: my-store.myshopify.com  # Optional if using SHOPIFY_STORE_URL secret
           
           # Enable backups only for production
-          backup.enabled: ${{ steps.mode.outputs.mode == 'production' }}
+          backup_enabled: ${{ steps.mode.outputs.mode == 'production' }}
           
           # Enable versioning only for production
-          versioning.enabled: ${{ steps.mode.outputs.mode == 'production' }}
+          versioning_enabled: ${{ steps.mode.outputs.mode == 'production' }}
           
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}

@@ -82,12 +82,12 @@ jobs:
           store: ${{ vars.SHOPIFY_STORE || secrets.SHOPIFY_STORE_URL }}
           
           # Sync configuration
-          sync.output: ${{ inputs.sync_mode || 'pr' }}
-          sync.branch: 'sync/live-theme-${{ github.run_number }}'
-          sync.commit_message: 'feat(sync): import live theme changes from ${{ vars.SHOPIFY_STORE }}'
+          sync_output: ${{ inputs.sync_mode || 'pr' }}
+          sync_branch: 'sync/live-theme-${{ github.run_number }}'
+          sync_commit_message: 'feat(sync): import live theme changes from ${{ vars.SHOPIFY_STORE }}'
           
           # What to sync - JSON files and settings
-          sync.only_globs: |
+          sync_only_globs: |
             templates/*.json
             sections/*.json
             config/settings_data.json

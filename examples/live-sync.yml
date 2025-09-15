@@ -30,10 +30,10 @@ jobs:
           store: ${{ vars.SHOPIFY_STORE }}  # Optional if using SHOPIFY_STORE_URL secret
           
           # Create PR instead of direct push (recommended)
-          sync.output: pr
+          sync_output: pr
           
           # Optional: customize what to sync (defaults to JSON files)
-          # sync.only_globs: |
+          # sync_only_globs: |
           #   templates/*.json
           #   config/settings_data.json
           #   locales/*.json

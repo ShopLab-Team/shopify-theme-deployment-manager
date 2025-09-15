@@ -14,6 +14,22 @@ async function run() {
   let config;
 
   try {
+    // Check for common input mistakes
+    const invalidInputs = [
+      'build.enabled',
+      'backup.enabled',
+      'versioning.enabled',
+      'push.nodelete',
+    ];
+    for (const invalid of invalidInputs) {
+      if (core.getInput(invalid)) {
+        const correct = invalid.replace('.', '_');
+        core.warning(
+          `⚠️ Invalid input '${invalid}' detected. Did you mean '${correct}'? GitHub Actions inputs use underscores, not dots.`
+        );
+      }
+    }
+
     // Get and validate inputs
     config = getConfig();
 

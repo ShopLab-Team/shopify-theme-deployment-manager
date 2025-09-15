@@ -5,7 +5,7 @@ name: Build Distribution
 
 on:
   push:
-    branches: [main, master]
+    branches: [master]
     paths:
       - 'src/**'
       - 'package.json'
@@ -19,9 +19,9 @@ jobs:
   build:
     name: Build and Commit dist
     runs-on: self-hosted
-    
-    # Only run on main repository, not on forks
-    if: github.repository == 'ShopLab-Team/shopify-theme-deployment-manager'
+   
+    # Security: Skip test on forked PRs to prevent secret exposure
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     
     steps:
       - name: Checkout code

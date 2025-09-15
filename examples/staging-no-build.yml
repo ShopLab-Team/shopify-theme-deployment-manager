@@ -1,0 +1,31 @@
+name: Staging Theme Deployment (No Build)
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    name: Deploy Theme
+    runs-on: self-hosted
+    
+    steps:
+      # Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Deploy theme
+      - name: Deploy to Shopify
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: staging
+          store: ${{ secrets.SHOPIFY_STORE_URL }}
+          build_enabled: false  # ✅ Correct: underscore, not dot
+          
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # Optional: You can also disable build via environment variable
+          # BUILD_ENABLED: false

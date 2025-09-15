@@ -72,11 +72,13 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `build.enabled` | Enable build step | `false` |
-| `build.node-version` | Node.js version for build | `20` |
-| `build.package-manager` | Package manager (`npm`, `yarn`, `pnpm`) | `npm` |
-| `build.command` | Build command to run | `npm ci && npm run build` |
-| `build.cwd` | Working directory for build | `.` |
+| `build_enabled` | Enable build step | `true` |
+| `build_node_version` | Node.js version for build | `20.x` |
+| `build_package_manager` | Package manager (`npm`, `yarn`, `pnpm`) | `npm` |
+| `build_command` | Build command to run | `npm ci && npm run build` |
+| `build_cwd` | Working directory for build | `.` |
+
+> ⚠️ **Important**: All inputs use underscores (`_`), not dots (`.`). For example, use `build_enabled`, not `build.enabled`.
 
 #### Branch Configuration
 
@@ -100,33 +102,33 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `backup.enabled` | Enable theme backups | `false` |
-| `backup.retention` | Number of backups to keep | `3` |
-| `backup.prefix` | Backup name prefix | `BACKUP_` |
-| `backup.timezone` | Timezone for backup timestamps | `Asia/Manila` |
+| `backup_enabled` | Enable theme backups | `true` |
+| `backup_retention` | Number of backups to keep | `3` |
+| `backup_prefix` | Backup name prefix | `BACKUP_` |
+| `backup_timezone` | Timezone for backup timestamps | `Asia/Manila` |
 
 #### Deployment Configuration
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `deploy.ignore_json_on_prod` | Ignore JSON files on production push | `false` |
-| `deploy.allow_live_push` | Allow pushing to live theme | `false` |
+| `deploy_ignore_json_on_prod` | Ignore JSON files on production push | `true` |
+| `deploy_allow_live_push` | Allow pushing to live theme | `false` |
 
 #### Versioning Configuration
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `versioning.enabled` | Enable theme versioning | `false` |
-| `versioning.strategy` | Version bump strategy (`patch`, `minor`, `major`) | `patch` |
+| `versioning_enabled` | Enable theme versioning | `true` |
+| `versioning_strategy` | Version bump strategy (`patch`, `minor`, `major`) | `patch` |
 
 #### Sync Configuration
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `sync.only_globs` | Files to sync from live theme | Same as `json.pull_globs` |
-| `sync.branch` | Branch for sync commits | `remote_changes` |
-| `sync.commit_message` | Commit message for sync | `chore(sync): import live JSON changes` |
-| `sync.output` | Sync output method (`pr` or `push`) | `pr` |
+| `sync_only_globs` | Files to sync from live theme | Same as `json_pull_globs` |
+| `sync_branch` | Branch for sync commits | `remote_changes` |
+| `sync_commit_message` | Commit message for sync | `chore(sync): import live JSON changes` |
+| `sync_output` | Sync output method (`pr` or `push`) | `pr` |
 
 ### Secrets
 
@@ -181,7 +183,7 @@ jobs:
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: staging
-          build.enabled: true
+          build_enabled: true
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
@@ -227,9 +229,9 @@ jobs:
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: production
-          build.enabled: true
-          backup.enabled: true
-          versioning.enabled: true
+          build_enabled: true
+          backup_enabled: true
+          versioning_enabled: true
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
@@ -335,14 +337,14 @@ shopify theme list --store=my-store.myshopify.com
   with:
     mode: staging
     store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    build.enabled: true
-    build.node-version: 18
-    build.package-manager: yarn
-    build.command: |
+    build_enabled: true
+    build_node_version: 18
+    build_package_manager: yarn
+    build_command: |
       yarn install --frozen-lockfile
       yarn build:css
       yarn build:js
-    build.cwd: ./theme
+    build_cwd: ./theme
 ```
 
 ### Selective File Sync
@@ -352,7 +354,7 @@ shopify theme list --store=my-store.myshopify.com
   with:
     mode: sync-live
     store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    sync.only_globs: |
+    sync_only_globs: |
       config/settings_data.json
       templates/product.json
       sections/header.json
@@ -365,8 +367,8 @@ shopify theme list --store=my-store.myshopify.com
   with:
     mode: production
     store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    deploy.allow_live_push: false  # Require PRODUCTION_THEME_ID
-    deploy.ignore_json_on_prod: true  # Preserve merchant customizations
+    deploy_allow_live_push: false  # Require PRODUCTION_THEME_ID
+    deploy_ignore_json_on_prod: true  # Preserve merchant customizations
 ```
 
 ## 🐛 Troubleshooting
