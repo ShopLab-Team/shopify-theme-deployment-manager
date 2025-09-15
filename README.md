@@ -131,6 +131,7 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 |-------|-------------|---------|
 | `sync_only_globs` | Files to sync from live theme | `templates/*.json`<br>`templates/customers/*.json`<br>`sections/*.json`<br>`snippets/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
 | `sync_branch` | Branch for sync commits | `remote_changes` |
+| `sync_target_branch` | Target branch for PR (when `sync_output: pr`) | `staging` |
 | `sync_commit_message` | Commit message for sync | `chore(sync): import live JSON changes` |
 | `sync_output` | Sync output method (`pr` or `push`) | `pr` |
 
@@ -268,11 +269,22 @@ jobs:
         with:
           mode: sync-live
           sync_output: pr  # Create PR for review
+          sync_branch: remote_changes  # Branch to commit changes to
+          sync_target_branch: staging  # Target branch for PR
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+#### How Live Sync Works
+
+1. **Pulls changes** from your live Shopify theme
+2. **Commits changes** to the `sync_branch` (default: `remote_changes`)
+3. **Creates or updates a PR** from `sync_branch` to `sync_target_branch` (default: `staging`)
+4. **Prevents duplicate PRs** - if a PR already exists, it updates the existing one
+
+> **Important**: The `remote_changes` branch should NOT be protected to allow the action to push changes directly.
 
 > 💡 **Tip**: See example workflows:
 > - `examples/live-sync-minimal.yml` for basic setup

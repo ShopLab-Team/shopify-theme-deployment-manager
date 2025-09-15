@@ -106,6 +106,7 @@ function getConfig() {
           'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
       ),
       branch: getInput('sync_branch') || 'remote_changes',
+      targetBranch: getInput('sync_target_branch') || 'staging',
       commitMessage: getInput('sync_commit_message') || 'chore(sync): import live JSON changes',
       output: getInput('sync_output') || 'pr',
     },

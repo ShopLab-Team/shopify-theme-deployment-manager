@@ -137,6 +137,11 @@ inputs:
     required: false
     default: 'remote_changes'
   
+  sync_target_branch:
+    description: 'Target branch for PR in sync-live mode'
+    required: false
+    default: 'staging'
+  
   sync_commit_message:
     description: 'Commit message for sync'
     required: false
@@ -211,8 +216,9 @@ runs:
         INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
         INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
         INPUT_VERSIONING_STRATEGY: ${{ inputs.versioning_strategy }}
-        INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
-        INPUT_SYNC_BRANCH: ${{ inputs.sync_branch }}
-        INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
-        INPUT_SYNC_OUTPUT: ${{ inputs.sync_output }}
+    INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
+    INPUT_SYNC_BRANCH: ${{ inputs.sync_branch }}
+    INPUT_SYNC_TARGET_BRANCH: ${{ inputs.sync_target_branch }}
+    INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
+    INPUT_SYNC_OUTPUT: ${{ inputs.sync_output }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}

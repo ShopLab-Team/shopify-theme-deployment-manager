@@ -101,7 +101,7 @@ describe('sync-live', () => {
         expect.objectContaining({
           token: 'github-token',
           branch: 'remote_changes',
-          baseBranch: 'main',
+          baseBranch: 'staging', // Now targets staging by default
         })
       );
 
