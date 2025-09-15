@@ -40453,10 +40453,10 @@ async function stagingDeploy(config) {
 
     // Step 3: Get source theme for JSON pull (production theme or live theme)
     let sourceTheme = null;
-    
+
     if (config.json.syncOnStaging && config.json.pullGlobs.length > 0) {
       core.startGroup('🔄 Getting source theme for JSON pull');
-      
+
       // First, check if production theme ID is provided
       if (config.secrets.productionThemeId) {
         core.info(`Using provided production theme ID: ${config.secrets.productionThemeId}`);
@@ -40476,7 +40476,7 @@ async function stagingDeploy(config) {
           core.warning(`Failed to get production theme: ${error.message}`);
         }
       }
-      
+
       // If no production theme ID or it wasn't found, try to find live theme
       if (!sourceTheme) {
         core.info('No production theme ID provided or not found, looking for live theme...');
@@ -40487,7 +40487,7 @@ async function stagingDeploy(config) {
           core.info(`Live theme found: ${sourceTheme.name} (ID: ${sourceTheme.id})`);
         }
       }
-      
+
       core.endGroup();
     } else if (!config.json.syncOnStaging) {
       core.info(
@@ -40507,7 +40507,9 @@ async function stagingDeploy(config) {
         config.json.pullGlobs,
         '.'
       );
-      core.info(`JSON files pulled from theme ${sourceTheme.name || sourceTheme} (ID: ${themeIdString})`);
+      core.info(
+        `JSON files pulled from theme ${sourceTheme.name || sourceTheme} (ID: ${themeIdString})`
+      );
       core.endGroup();
     }
 

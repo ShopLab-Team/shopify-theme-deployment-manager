@@ -76,11 +76,15 @@ git add .
 git commit -m "your commit message"
 ```
 
-### Automated Builds
+### Manual Build Process
 
-The repository includes a GitHub workflow (`.github/workflows/build-dist.yml`) that automatically rebuilds and commits the `dist/` directory when source files change on the main branch.
+**Important**: There is no automated build workflow. The `dist/` directory must be manually built and committed with your changes. This is intentional to:
 
-However, you should still build locally before committing to ensure your changes work correctly.
+1. Avoid conflicts with branch protection rules
+2. Ensure developers test their changes before committing
+3. Keep the build process predictable and controlled
+
+Always run `npm run build` before committing your changes.
 
 ## Testing
 
