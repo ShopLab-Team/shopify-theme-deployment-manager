@@ -61,6 +61,11 @@ inputs:
       locales/*.json
       config/settings_data.json
   
+  json_sync_on_staging:
+    description: 'Whether to sync JSON files from live theme during staging deployments'
+    required: false
+    default: 'true'
+  
   # Push Configuration
   push_extra_ignore:
     description: 'Additional glob patterns to ignore during push (newline-separated)'
@@ -192,6 +197,7 @@ runs:
         INPUT_BUILD_COMMAND: ${{ inputs.build_command }}
         INPUT_BUILD_CWD: ${{ inputs.build_cwd }}
         INPUT_JSON_PULL_GLOBS: ${{ inputs.json_pull_globs }}
+        INPUT_JSON_SYNC_ON_STAGING: ${{ inputs.json_sync_on_staging }}
         INPUT_PUSH_EXTRA_IGNORE: ${{ inputs.push_extra_ignore }}
         INPUT_PUSH_NODELETE: ${{ inputs.push_nodelete }}
         INPUT_BACKUP_ENABLED: ${{ inputs.backup_enabled }}

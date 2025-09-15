@@ -42,7 +42,7 @@ describe('staging', () => {
       },
       json: {
         pullGlobs: ['templates/*.json', 'config/settings_data.json'],
-        pullBeforePush: true,
+        syncOnStaging: true,
       },
       push: {
         extraIgnore: [],
@@ -159,6 +159,28 @@ describe('staging', () => {
       expect(buildAssets).toHaveBeenCalled();
       expect(getLiveTheme).toHaveBeenCalled(); // Always called to check for live theme
       expect(pullThemeFiles).not.toHaveBeenCalled(); // Not called when no globs
+      expect(pushThemeFiles).toHaveBeenCalled();
+    });
+
+    it('should skip JSON pull when syncOnStaging is false', async () => {
+      const configNoSync = {
+        ...mockConfig,
+        json: { ...mockConfig.json, syncOnStaging: false },
+      };
+
+      const mockStagingTheme = { id: 987654, name: 'STAGING' };
+      const mockLiveTheme = { id: 123456, name: 'Live Theme' };
+
+      ensureThemeExists.mockResolvedValue(mockStagingTheme);
+      getLiveTheme.mockResolvedValue(mockLiveTheme);
+      buildAssets.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 20, theme: mockStagingTheme });
+
+      await stagingDeploy(configNoSync);
+
+      expect(buildAssets).toHaveBeenCalled();
+      expect(getLiveTheme).toHaveBeenCalled(); // Always called to check for live theme
+      expect(pullThemeFiles).not.toHaveBeenCalled(); // Not called when syncOnStaging is false
       expect(pushThemeFiles).toHaveBeenCalled();
     });
 

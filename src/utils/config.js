@@ -63,6 +63,13 @@ function getConfig() {
       pullGlobs: parseMultilineInput(
         getInput('json_pull_globs') || 'templates/*.json\nlocales/*.json\nconfig/settings_data.json'
       ),
+      syncOnStaging: parseBoolean(
+        process.env.SYNC_JSON_ON_STAGING !== undefined
+          ? process.env.SYNC_JSON_ON_STAGING
+          : getInput('json_sync_on_staging') !== ''
+            ? getInput('json_sync_on_staging')
+            : 'true'
+      ),
     },
 
     // Push configuration

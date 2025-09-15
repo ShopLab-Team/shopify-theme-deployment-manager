@@ -25,6 +25,7 @@ async function stagingDeploy(config) {
       core.info(`Staging Theme ID: ${config.secrets.stagingThemeId ? '[SET]' : '[NOT SET]'}`);
       core.info(`Build enabled: ${config.build.enabled}`);
       core.info(`Build command: ${config.build.command}`);
+      core.info(`JSON sync enabled: ${config.json.syncOnStaging}`);
       core.info(`JSON pull globs: ${config.json.pullGlobs.join(', ')}`);
       core.endGroup();
 
@@ -70,7 +71,7 @@ async function stagingDeploy(config) {
     core.endGroup();
 
     // Step 4: Pull JSON from live theme
-    if (liveTheme && config.json.pullGlobs.length > 0) {
+    if (liveTheme && config.json.syncOnStaging && config.json.pullGlobs.length > 0) {
       core.startGroup('📥 Pulling JSON from live theme');
       await pullThemeFiles(
         config.secrets.themeToken,
@@ -81,6 +82,10 @@ async function stagingDeploy(config) {
       );
       core.info('JSON files pulled from live theme');
       core.endGroup();
+    } else if (liveTheme && !config.json.syncOnStaging) {
+      core.info(
+        '⏭️ Skipping JSON sync (disabled via SYNC_JSON_ON_STAGING or json_sync_on_staging)'
+      );
     }
 
     // Step 5: Push to staging theme

@@ -1,0 +1,262 @@
+# Comprehensive Live Theme Sync Example
+# This workflow syncs changes from your live Shopify theme back to your repository
+# It creates a pull request for review to prevent accidental overwrites
+
+name: Live Theme Sync - Comprehensive
+
+on:
+  # Schedule: Run every 6 hours (minimum is 5 minutes for GitHub Actions)
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+    # - cron: '0 2 * * *'  # Daily at 2 AM
+    # - cron: '0 0 * * 1'  # Weekly on Monday at midnight
+    # - cron: '*/5 * * * *'  # Every 5 minutes (minimum allowed)
+  
+  # Manual trigger with inputs
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Target branch for PR (default: main)'
+        required: false
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - staging
+          - development
+      sync_mode:
+        description: 'Sync output mode'
+        required: false
+        default: 'pr'
+        type: choice
+        options:
+          - pr        # Create pull request (recommended)
+          - push      # Direct push to branch
+      dry_run:
+        description: 'Perform dry run only'
+        required: false
+        default: false
+        type: boolean
+
+# Permissions needed for creating PRs
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Sync Live Theme Changes
+    runs-on: ubuntu-latest
+    
+    # Prevent concurrent syncs
+    concurrency:
+      group: live-sync
+      cancel-in-progress: false
+    
+    steps:
+      # Checkout repository with full history for proper diff
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          # Use GitHub App token or PAT for PR creation
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Fetch all history for proper diff
+          fetch-depth: 0
+          # Checkout the target branch for PR
+          ref: ${{ inputs.target_branch || 'main' }}
+      
+      # Configure git for commits
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      # Main sync action
+      - name: Sync from Live Theme
+        id: sync
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: sync-live
+          
+          # Store configuration
+          store: ${{ vars.SHOPIFY_STORE || secrets.SHOPIFY_STORE_URL }}
+          
+          # Sync configuration
+          sync.output: ${{ inputs.sync_mode || 'pr' }}
+          sync.branch: 'sync/live-theme-${{ github.run_number }}'
+          sync.commit_message: 'feat(sync): import live theme changes from ${{ vars.SHOPIFY_STORE }}'
+          
+          # What to sync - JSON files and settings
+          sync.only_globs: |
+            templates/*.json
+            sections/*.json
+            config/settings_data.json
+            config/settings_schema.json
+            locales/*.json
+            
+          # Dry run mode for testing
+          dry_run: ${{ inputs.dry_run || false }}
+        
+        env:
+          # Required: Shopify theme access token
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          
+          # Required for PR creation
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: Slack notifications
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      # Create detailed PR comment with sync results
+      - name: Comment on PR
+        if: steps.sync.outputs.pull_request_url && !inputs.dry_run
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prUrl = '${{ steps.sync.outputs.pull_request_url }}';
+            const prNumber = prUrl.split('/').pop();
+            
+            const comment = `## 📊 Live Theme Sync Summary
+            
+            ### 📈 Statistics
+            - **Files Changed**: ${{ steps.sync.outputs.files_count || '0' }}
+            - **Sync Time**: ${{ steps.sync.outputs.sync_time || 'N/A' }}s
+            - **Theme ID**: ${{ steps.sync.outputs.theme_id || 'N/A' }}
+            - **Theme Name**: ${{ steps.sync.outputs.theme_name || 'N/A' }}
+            
+            ### 🔍 Review Checklist
+            - [ ] Review all JSON changes for merchant customizations
+            - [ ] Check locale files for translation updates
+            - [ ] Verify settings_data.json for theme configuration
+            - [ ] Ensure no development/test data is included
+            - [ ] Confirm changes are production-ready
+            
+            ### ⚠️ Important Notes
+            - These changes are from the **live production theme**
+            - Merging will overwrite local JSON files
+            - Consider testing on staging theme first
+            - Review carefully before merging
+            
+            ---
+            *Workflow Run: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(prNumber),
+              body: comment
+            });
+      
+      # Add labels to PR
+      - name: Label PR
+        if: steps.sync.outputs.pull_request_url && !inputs.dry_run
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prUrl = '${{ steps.sync.outputs.pull_request_url }}';
+            const prNumber = prUrl.split('/').pop();
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(prNumber),
+              labels: ['theme-sync', 'automated', 'review-required']
+            });
+      
+      # Post to Slack with detailed sync results
+      - name: Slack Notification (Custom)
+        if: steps.sync.outputs.synced == 'true' && !inputs.dry_run
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "Live Theme Sync Completed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🔄 Live Theme Sync Completed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Store:*\n${{ vars.SHOPIFY_STORE }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Files Changed:*\n${{ steps.sync.outputs.files_count || '0' }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*PR:*\n<${{ steps.sync.outputs.pull_request_url || 'N/A' }}|View PR>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n✅ Success"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Triggered by: ${{ github.actor }} | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    }
+                  ]
+                }
+              ]
+            }
+      
+      # Summary output
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "## 📊 Live Theme Sync Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "### 🧪 DRY RUN MODE" >> $GITHUB_STEP_SUMMARY
+            echo "No actual changes were made." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### 📈 Sync Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ${{ steps.sync.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Files Synced** | ${{ steps.sync.outputs.files_count || '0' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync Time** | ${{ steps.sync.outputs.sync_time || 'N/A' }}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ steps.sync.outputs.branch || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **PR URL** | ${{ steps.sync.outputs.pull_request_url || 'No PR created' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🏪 Theme Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Store**: ${{ vars.SHOPIFY_STORE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Theme ID**: ${{ steps.sync.outputs.theme_id || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Theme Name**: ${{ steps.sync.outputs.theme_name || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🔧 Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Branch**: ${{ inputs.target_branch || 'main' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sync Mode**: ${{ inputs.sync_mode || 'pr' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          
+      # Error handling and debugging
+      - name: Debug Information
+        if: failure()
+        run: |
+          echo "::error::Live theme sync failed"
+          echo "Check the logs above for detailed error information"
+          echo "Common issues:"
+          echo "- Invalid SHOPIFY_CLI_THEME_TOKEN"
+          echo "- No live theme found in the store"
+          echo "- Git conflicts in the sync branch"
+          echo "- Rate limiting from Shopify API"
