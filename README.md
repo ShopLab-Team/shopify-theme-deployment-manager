@@ -5,14 +5,17 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 ## ✨ Features
 
 - **🎭 Multi-Environment Deployment**: Separate staging and production workflows
-- **🔄 Live Theme Sync**: Pull live theme changes back to your repository
+- **🔄 Live Theme Sync**: Pull live theme changes back to your repository with PR creation
 - **💾 Automatic Backups**: Create timestamped backups with retention policies
 - **🏷️ Version Management**: Automatic semantic versioning for production themes
 - **📦 Build Integration**: Support for npm, yarn, and pnpm build steps
 - **🔔 Slack Notifications**: Rich notifications for deployment events
 - **🛡️ Safety Guards**: Prevent accidental live theme overwrites
-- **🔁 Retry Logic**: Automatic retries with exponential backoff
+- **🔁 Smart Retry Logic**: Automatic retries with exponential backoff (never creates duplicate themes)
 - **📊 Rate Limit Handling**: Respect Shopify API rate limits
+- **🔒 Enterprise Security**: Fork protection, input sanitization, and secure secret handling
+- **🎛️ Flexible JSON Sync**: Control whether to sync JSON files during staging deployments
+- **🌿 Smart PR Creation**: Creates PRs to the current branch, not always main
 
 ## 📋 Table of Contents
 
@@ -81,13 +84,16 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 | `branch.staging` | Branch that triggers staging deployment | `staging` |
 | `branch.production` | Branch that triggers production deployment | `main,master` |
 
-#### Theme Push Configuration
+#### JSON & Theme Push Configuration
 
 | Input | Description | Default |
 |-------|-------------|---------|
 | `json.pull_globs` | JSON files to pull from live theme | `templates/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
+| `json.sync_on_staging` | Enable JSON sync from live theme during staging deployment | `true` |
 | `push.extra_ignore` | Additional patterns to ignore during push | - |
 | `push.nodelete` | Prevent deletion of remote files | `false` |
+
+> **Note**: You can also control JSON sync via the `SYNC_JSON_ON_STAGING` environment variable
 
 #### Backup Configuration
 
@@ -133,6 +139,7 @@ Set these as environment variables:
 | `PRODUCTION_THEME_ID` | Production theme ID | Optional |
 | `SLACK_WEBHOOK_URL` | Slack webhook for notifications | Optional |
 | `GITHUB_TOKEN` | GitHub token for PR creation | For sync with PR |
+| `SYNC_JSON_ON_STAGING` | Control JSON sync during staging (`true`/`false`) | Optional |
 
 ## 📤 Outputs
 
@@ -182,6 +189,22 @@ jobs:
 
 > 💡 **See also**: `examples/simple-setup.yml` for a complete workflow with both staging and production
 
+#### Staging Without JSON Sync
+
+To deploy to staging without syncing JSON files from the live theme:
+
+```yaml
+- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+  with:
+    mode: staging
+    json.sync_on_staging: false  # Disable JSON sync
+  env:
+    SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+    STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
+    # Or use environment variable:
+    # SYNC_JSON_ON_STAGING: false
+```
+
 ### Production Deployment
 
 Deploy to production with backups and versioning:
@@ -212,7 +235,9 @@ jobs:
           PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
 ```
 
-> 💡 **See also**: `examples/advanced-production.yml` for release management, custom retention, and deployment safeguards
+> 💡 **See also**: 
+> - `examples/advanced-production.yml` for release management, custom retention, and deployment safeguards
+> - `.github/workflows/deploy-production.yml.example` for enterprise-grade production deployment with environment protection
 
 ### Live Theme Sync
 
@@ -242,7 +267,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-> 💡 **Tip**: See `examples/live-sync.yml` for advanced options like custom sync patterns and Slack notifications.
+> 💡 **Tip**: See example workflows:
+> - `examples/live-sync-minimal.yml` for basic setup
+> - `examples/live-sync.yml` for automated schedules and PR creation  
+> - `examples/live-sync-comprehensive.yml` for advanced configuration with workflow inputs, Slack integration, and detailed PR comments
 
 ## ⚙️ Configuration
 

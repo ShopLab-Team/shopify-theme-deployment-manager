@@ -10,6 +10,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Nothing yet
 
+## [1.1.0] - 2025-09-15
+
+### Added
+- **Security Enhancements**
+  - Fork protection in workflows to prevent secret exposure
+  - Comprehensive input sanitization to prevent injection attacks
+  - SECURITY.md documentation with detailed guidelines
+  - Production deployment workflow example with environment protection
+  - Webhook URL validation and allowlisting
+  - Theme ID validation (numeric only)
+  - Store domain validation and normalization
+  - Path traversal prevention
+  - Shell metacharacter filtering
+
+- **JSON Sync Control**
+  - `json.sync_on_staging` input to control JSON sync during staging
+  - `SYNC_JSON_ON_STAGING` environment variable support
+  - Ability to disable JSON sync for staging deployments
+
+- **Documentation**
+  - Comprehensive live sync example (`live-sync-comprehensive.yml`)
+  - Enterprise-grade production deployment example
+  - Security best practices documentation
+  - Updated README with all new features
+
+### Changed
+- Retry logic confirmed to never create duplicate themes
+- PR creation targets the current branch (not always main)
+- Test workflows now skip on forked PRs for security
+
+### Fixed
+- Removed unused imports and variables
+- Fixed arrow function formatting inconsistencies
+- Corrected test expectations for optional properties
+
 ## [1.0.0] - 2025-09-10
 
 ### Added
