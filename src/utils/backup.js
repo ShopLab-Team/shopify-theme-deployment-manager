@@ -60,66 +60,17 @@ async function createBackup(token, store, options = {}) {
  */
 async function duplicateTheme(token, store, sourceThemeId, name) {
   const storeDomain = normalizeStore(store);
-  let output = '';
-
-  const options = {
-    listeners: {
-      stdout: (data) => {
-        output += data.toString();
-      },
-    },
-    env: {
-      ...process.env,
-      SHOPIFY_CLI_THEME_TOKEN: token,
-      SHOPIFY_FLAG_STORE: storeDomain,
-    },
-    silent: true,
-  };
+  const fs = require('fs').promises;
+  const path = require('path');
+  const tempDir = path.join(process.cwd(), '.theme-backup-temp');
 
   try {
-    // Use shopify theme push to create a new theme with the content
-    // Note: Shopify CLI 3.x doesn't have 'duplicate' command, we use push to new theme
-    await exec.exec(
-      'shopify',
-      [
-        'theme',
-        'push',
-        '--store',
-        storeDomain,
-        '--theme',
-        sourceThemeId,
-        '--unpublished',
-        '--name',
-        name,
-        '--json',
-      ],
-      options
-    );
+    // Step 1: Create temp directory
+    core.info('Creating temporary directory for theme backup...');
+    await fs.mkdir(tempDir, { recursive: true });
 
-    // Parse the output to get new theme info
-    const result = JSON.parse(output);
-    if (result.theme) {
-      return result.theme;
-    }
-
-    // Fallback: list themes to find the newly created one
-    const { listThemes } = require('./shopify-cli');
-    const themes = await listThemes(token, store);
-    const newTheme = themes.find((t) => t.name === name);
-
-    if (!newTheme) {
-      throw new Error('Failed to find duplicated theme');
-    }
-
-    return newTheme;
-  } catch (error) {
-    // Alternative approach: use theme init to create new theme
-    core.info('Trying alternative duplication method...');
-
-    // Create new unpublished theme
-    const newTheme = await createNewTheme(token, store, name);
-
-    // Pull from source and push to new theme
+    // Step 2: Download the source theme
+    core.info(`Downloading theme ${sourceThemeId} to temporary directory...`);
     await exec.exec(
       'shopify',
       [
@@ -130,7 +81,8 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
         '--theme',
         sourceThemeId,
         '--path',
-        '.theme-backup-temp',
+        tempDir,
+        '--force', // Overwrite any existing files
       ],
       {
         env: {
@@ -141,6 +93,9 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
       }
     );
 
+    // Step 3: Create new theme by pushing the downloaded files
+    core.info(`Creating new theme: ${name}...`);
+    let output = '';
     await exec.exec(
       'shopify',
       [
@@ -148,36 +103,77 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
         'push',
         '--store',
         storeDomain,
+        '--unpublished',
         '--theme',
-        newTheme.id.toString(),
+        name,
         '--path',
-        '.theme-backup-temp',
+        tempDir,
+        '--force',
         '--json',
       ],
       {
+        listeners: {
+          stdout: (data) => {
+            output += data.toString();
+          },
+        },
         env: {
           ...process.env,
           SHOPIFY_CLI_THEME_TOKEN: token,
           SHOPIFY_FLAG_STORE: storeDomain,
         },
+        silent: true,
       }
     );
 
-    // Clean up temp directory
-    await exec.exec('rm', ['-rf', '.theme-backup-temp']);
+    // Parse the output to get new theme info
+    let newTheme;
+    try {
+      const result = JSON.parse(output);
+      if (result.theme) {
+        newTheme = result.theme;
+      }
+    } catch (parseError) {
+      core.debug(`Failed to parse JSON output: ${parseError.message}`);
+    }
 
+    // If we couldn't get theme from output, find it by name
+    if (!newTheme) {
+      const { listThemes } = require('./shopify-cli');
+      const themes = await listThemes(token, store);
+      newTheme = themes.find((t) => t.name === name);
+
+      if (!newTheme) {
+        throw new Error('Failed to find newly created backup theme');
+      }
+    }
+
+    core.info(`✅ Successfully created backup theme: ${name} (ID: ${newTheme.id})`);
     return newTheme;
+  } catch (error) {
+    core.error(`Failed to duplicate theme: ${error.message}`);
+    throw error;
+  } finally {
+    // Step 4: Clean up temp directory
+    try {
+      core.info('Cleaning up temporary directory...');
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      core.warning(`Failed to clean up temp directory: ${cleanupError.message}`);
+    }
   }
 }
 
 /**
- * Create a new empty theme
+ * Create a new empty theme (DEPRECATED - not used anymore)
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
  * @param {string} name - Theme name
  * @returns {Promise<Object>} New theme
  */
 async function createNewTheme(token, store, name) {
+  // This function is no longer used as we handle theme creation
+  // directly in duplicateTheme using push --unpublished
   const storeDomain = normalizeStore(store);
   let output = '';
 
