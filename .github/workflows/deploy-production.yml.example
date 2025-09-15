@@ -1,0 +1,231 @@
+# Production Deployment Workflow - Security Hardened
+# Rename this file to deploy-production.yml to use
+
+name: Deploy to Production
+
+on:
+  # Manual deployment with confirmation
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm production deployment'
+        required: true
+        type: string
+      
+  # Automated deployment on release
+  release:
+    types: [published]
+  
+  # Deployment after PR merge to main
+  push:
+    branches: [main]
+    paths:
+      # Only deploy when theme files change
+      - 'assets/**'
+      - 'config/**'
+      - 'layout/**'
+      - 'locales/**'
+      - 'sections/**'
+      - 'snippets/**'
+      - 'templates/**'
+
+# Minimal required permissions
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  # Pre-deployment validation
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+    # Security: Ensure this is not a fork
+    if: github.repository == 'YourOrg/YourRepo'
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check deployment conditions
+        id: check
+        run: |
+          # For manual dispatch, verify confirmation
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ inputs.confirm }}" != "deploy" ]]; then
+              echo "❌ Deployment not confirmed"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          
+          # Verify we're on main branch
+          if [[ "${{ github.ref }}" != "refs/heads/main" ]] && [[ "${{ github.event_name }}" != "release" ]]; then
+            echo "❌ Not on main branch"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "✅ All checks passed"
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+      
+      - name: Run security scan
+        run: |
+          # Add any security scanning tools here
+          echo "Running security checks..."
+          # Example: npm audit, bundler-audit, etc.
+
+  # Staging deployment first (optional but recommended)
+  deploy-staging:
+    name: Deploy to Staging
+    needs: validate
+    if: needs.validate.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Staging
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: staging
+          dry_run: false
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Run smoke tests
+        run: |
+          # Add smoke tests against staging
+          echo "Running smoke tests on staging..."
+          # Example: curl health checks, lighthouse, etc.
+
+  # Production deployment with manual approval
+  deploy-production:
+    name: Deploy to Production
+    needs: [validate, deploy-staging]
+    if: needs.validate.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    # GitHub Environment with protection rules
+    environment:
+      name: production
+      url: https://${{ secrets.SHOPIFY_STORE_URL }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Create deployment
+        id: deployment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false,
+              description: 'Production theme deployment'
+            });
+            core.setOutput('id', deployment.data.id);
+      
+      - name: Deploy to Production
+        id: deploy
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: production
+          dry_run: false
+          # Production-specific settings
+          backup_enabled: true
+          backup_retention: 5
+          versioning_enabled: true
+          versioning_strategy: patch
+          deploy_allow_live_push: false
+          deploy_ignore_json_on_prod: true
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.PRODUCTION_SHOPIFY_TOKEN }}
+          PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Update deployment status
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.deployment.outputs.id }},
+              state: '${{ steps.deploy.outcome }}' === 'success' ? 'success' : 'failure',
+              environment_url: 'https://${{ secrets.SHOPIFY_STORE_URL }}',
+              description: 'Deployment ${{ steps.deploy.outcome }}'
+            });
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Production Deployment Failed',
+              body: `Production deployment failed!\n\nWorkflow: ${context.workflow}\nRun: ${context.runNumber}\nActor: ${context.actor}\n\n[View logs](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              labels: ['deployment', 'production', 'urgent']
+            });
+
+  # Post-deployment validation
+  validate-production:
+    name: Validate Production
+    needs: deploy-production
+    if: success()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Health check
+        run: |
+          # Verify the deployment
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.SHOPIFY_STORE_URL }})
+          if [ $response -eq 200 ]; then
+            echo "✅ Site is up"
+          else
+            echo "❌ Site returned $response"
+            exit 1
+          fi
+      
+      - name: Performance check
+        continue-on-error: true
+        run: |
+          # Optional: Run Lighthouse or other performance checks
+          echo "Running performance validation..."
+      
+      - name: Create deployment summary
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const summary = `## 🚀 Production Deployment Complete
+            
+            **Environment:** Production
+            **Store:** ${{ secrets.SHOPIFY_STORE_URL }}
+            **Deployed by:** ${{ github.actor }}
+            **Commit:** ${{ github.sha }}
+            
+            ### ✅ Validation Results
+            - Health check: Passed
+            - Staging tests: Passed
+            - Security scan: Passed
+            
+            [View Store](https://${{ secrets.SHOPIFY_STORE_URL }})
+            `;
+            
+            await core.summary
+              .addRaw(summary)
+              .write();

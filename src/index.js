@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const { validateInputs } = require('./utils/validators');
 const { getConfig } = require('./utils/config');
+const { sanitizeConfig } = require('./utils/sanitize');
 const { installShopifyCLI, validateThemeToken } = require('./utils/shopify-cli');
 const { stagingDeploy } = require('./modes/staging');
 const { productionDeploy } = require('./modes/production');
@@ -15,6 +16,9 @@ async function run() {
   try {
     // Get and validate inputs
     config = getConfig();
+
+    // Sanitize inputs to prevent injection attacks
+    config = sanitizeConfig(config);
 
     // Log mode and store for debugging
     core.startGroup('🚀 Starting Shopify Theme Deploy Action');

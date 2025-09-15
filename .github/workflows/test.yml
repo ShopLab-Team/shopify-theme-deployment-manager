@@ -7,10 +7,16 @@ on:
     branches: ["main", "master"]
   workflow_dispatch:
 
+# Minimal permissions for testing
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test Suite
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    # Security: Skip test on forked PRs to prevent secret exposure
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     
     steps:
       - name: Checkout repository

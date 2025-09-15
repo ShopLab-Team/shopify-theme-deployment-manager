@@ -423,6 +423,28 @@ Contributions are welcome! Please:
 4. Ensure all tests pass
 5. Submit a pull request
 
+## 🔒 Security
+
+### Security Features
+
+- **Fork Protection**: Workflows automatically skip on forked PRs to prevent secret exposure
+- **Input Sanitization**: All inputs are sanitized to prevent injection attacks
+- **Secret Management**: All sensitive data stored in GitHub Secrets
+- **HTTPS Only**: All API communications use HTTPS with SSL verification
+- **Token Scoping**: Support for minimal permission tokens
+- **Audit Logging**: All deployments logged in GitHub Actions
+
+### Best Practices
+
+1. **Use GitHub Environments** for production with protection rules
+2. **Enable manual approval** for production deployments
+3. **Rotate tokens regularly** (every 90 days recommended)
+4. **Use separate tokens** for staging and production
+5. **Monitor deployments** with Slack notifications
+6. **Test with dry-run** before production deployments
+
+See [SECURITY.md](SECURITY.md) for detailed security guidelines and production deployment examples.
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
