@@ -1,4 +1,5 @@
 npm run lint
 npm run format
+npm run build
 git add -A
 npm test
