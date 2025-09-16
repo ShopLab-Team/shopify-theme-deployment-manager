@@ -74,26 +74,36 @@ async function syncLive(config) {
       core.endGroup();
     }
 
-    core.startGroup('📝 Creating .shopifyignore to exclude non-theme files');
+    core.startGroup('📝 Creating .shopifyignore to include only theme directories');
+    // Use allowlist approach: ignore everything, then explicitly allow theme directories
     const shopifyIgnoreContent = [
-      '.git',
-      '.github',
-      '.vscode',
-      '*.config.js',
-      'package.json',
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      'node_modules',
-      '.gitignore',
-      'README.md',
-      'LICENSE',
-      '.env',
-      'dist',
-      'coverage',
+      '# Ignore everything by default',
+      '*',
+      '.*',
+      '',
+      '# Allow only Shopify theme directories and files',
+      '!assets/',
+      '!assets/**',
+      '!config/',
+      '!config/**',
+      '!layout/',
+      '!layout/**',
+      '!locales/',
+      '!locales/**',
+      '!sections/',
+      '!sections/**',
+      '!snippets/',
+      '!snippets/**',
+      '!templates/',
+      '!templates/**',
+      '!templates/customers/',
+      '!templates/customers/**',
+      '!templates/metaobject/',
+      '!templates/metaobject/**',
+      '!translation.yml',
     ].join('\n');
     await fs.writeFile('.shopifyignore', shopifyIgnoreContent);
-    core.info('Created .shopifyignore file.');
+    core.info('Created .shopifyignore file with theme-only allowlist.');
     core.endGroup();
 
     // Step 4: Pull theme files
