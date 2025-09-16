@@ -1,5 +1,11 @@
 const core = require('@actions/core');
-const { getLiveTheme, getThemeById, pushThemeFiles, packageTheme, openTheme } = require('../utils/shopify-cli');
+const {
+  getLiveTheme,
+  getThemeById,
+  pushThemeFiles,
+  packageTheme,
+  openTheme,
+} = require('../utils/shopify-cli');
 const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../utils/backup');
 const { normalizeStore } = require('../utils/validators');
 const { buildAssets } = require('../utils/build');

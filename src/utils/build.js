@@ -76,7 +76,7 @@ async function buildAssets(buildConfig) {
           autoCorrect: buildConfig.themeCheckAutoCorrect || false,
           json: true,
         });
-        
+
         if (!checkResult.success) {
           if (buildConfig.themeCheckFailOnError) {
             throw new Error('Theme check found errors. Fix them before deploying.');

@@ -406,13 +406,13 @@ async function getThemeInfo(token, store, themeId) {
 
     // Parse JSON output
     const themeInfo = JSON.parse(output);
-    
+
     if (themeInfo && themeInfo.theme) {
       const theme = themeInfo.theme;
       core.info(`Found theme via info: ${theme.name} (ID: ${theme.id})`);
       return theme;
     }
-    
+
     return null;
   } catch (error) {
     // Theme info might not exist or theme not found
@@ -429,9 +429,9 @@ async function getThemeInfo(token, store, themeId) {
  */
 async function packageTheme(themePath = '.', outputPath = null) {
   let output = '';
-  
+
   const args = ['theme', 'package', '--path', themePath];
-  
+
   if (outputPath) {
     args.push('--output', outputPath);
   }
@@ -447,11 +447,11 @@ async function packageTheme(themePath = '.', outputPath = null) {
   try {
     core.info(`Packaging theme from ${themePath}...`);
     await exec.exec('shopify', args, options);
-    
+
     // Extract ZIP file path from output
     const zipPathMatch = output.match(/Theme packaged to: (.+\.zip)/i);
     const zipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
-    
+
     core.info(`✅ Theme packaged to: ${zipPath}`);
     return zipPath;
   } catch (error) {
@@ -469,19 +469,19 @@ async function packageTheme(themePath = '.', outputPath = null) {
 async function checkTheme(themePath = '.', options = {}) {
   let output = '';
   let errorOutput = '';
-  
+
   const args = ['theme', 'check', '--path', themePath];
-  
+
   // Add auto-correct flag if specified
   if (options.autoCorrect) {
     args.push('--auto-correct');
   }
-  
+
   // Add specific check categories if specified
   if (options.category) {
     args.push('--category', options.category);
   }
-  
+
   // Output format
   if (options.json) {
     args.push('--json');
@@ -502,9 +502,9 @@ async function checkTheme(themePath = '.', options = {}) {
   try {
     core.info(`Running theme check on ${themePath}...`);
     const exitCode = await exec.exec('shopify', args, execOptions);
-    
+
     const hasErrors = exitCode !== 0;
-    
+
     if (options.json) {
       try {
         const results = JSON.parse(output);
@@ -516,7 +516,7 @@ async function checkTheme(themePath = '.', options = {}) {
         core.debug(`Failed to parse theme check JSON: ${parseError.message}`);
       }
     }
-    
+
     return {
       success: !hasErrors,
       output,
@@ -558,19 +558,23 @@ async function openTheme(token, store, themeId) {
       ['theme', 'open', '--store', storeDomain, '--theme', themeId],
       options
     );
-    
+
     // Parse URLs from output
     const previewMatch = output.match(/Preview: (.+)/i);
     const editorMatch = output.match(/Editor: (.+)/i);
-    
+
     const urls = {
-      preview: previewMatch ? previewMatch[1].trim() : `https://${storeDomain}/?preview_theme_id=${themeId}`,
-      editor: editorMatch ? editorMatch[1].trim() : `https://${storeDomain}/admin/themes/${themeId}/editor`,
+      preview: previewMatch
+        ? previewMatch[1].trim()
+        : `https://${storeDomain}/?preview_theme_id=${themeId}`,
+      editor: editorMatch
+        ? editorMatch[1].trim()
+        : `https://${storeDomain}/admin/themes/${themeId}/editor`,
     };
-    
+
     core.info(`Theme URLs - Preview: ${urls.preview}`);
     core.info(`Theme URLs - Editor: ${urls.editor}`);
-    
+
     return urls;
   } catch (error) {
     // Fallback to constructed URLs if open fails
