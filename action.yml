@@ -1,6 +1,6 @@
 name: 'Shopify Theme Deploy & Sync'
 description: 'Standardized Shopify theme deployments for staging and production with backups, selective uploads, and live sync'
-author: 'shoplab-actions'
+author: 'ShopLab-Team'
 branding:
   icon: 'package'
   color: 'green'
@@ -52,6 +52,21 @@ inputs:
     required: false
     default: '.'
   
+  build_theme_check:
+    description: 'Run theme check after build'
+    required: false
+    default: 'false'
+  
+  build_theme_check_auto_correct:
+    description: 'Auto-correct theme check issues'
+    required: false
+    default: 'false'
+  
+  build_theme_check_fail_on_error:
+    description: 'Fail deployment if theme check finds errors'
+    required: false
+    default: 'false'
+  
   # JSON Pull Configuration
   json_pull_globs:
     description: 'Glob patterns for JSON files to pull from live theme (newline-separated)'
@@ -99,7 +114,7 @@ inputs:
   backup_timezone:
     description: 'Timezone for backup timestamps'
     required: false
-    default: 'Asia/Manila'
+    default: 'UTC'
   
   # Deploy Configuration
   deploy_ignore_json_on_prod:
@@ -180,6 +195,31 @@ outputs:
   version:
     description: 'Version tag after deployment'
     value: ${{ steps.deploy.outputs.version }}
+  
+  package_path:
+    description: 'Path to theme package ZIP file (production mode with versioning)'
+    value: ${{ steps.deploy.outputs.package_path }}
+  
+  # Sync-specific outputs
+  synced:
+    description: 'Whether sync was performed (sync-live mode)'
+    value: ${{ steps.deploy.outputs.synced }}
+  
+  files_count:
+    description: 'Number of files synced (sync-live mode)'
+    value: ${{ steps.deploy.outputs.files_count }}
+  
+  branch:
+    description: 'Branch used for sync (sync-live mode)'
+    value: ${{ steps.deploy.outputs.branch }}
+  
+  pull_request_url:
+    description: 'URL of created/updated pull request (sync-live mode with PR)'
+    value: ${{ steps.deploy.outputs.pull_request_url }}
+  
+  deployment_time:
+    description: 'Time taken for deployment in seconds'
+    value: ${{ steps.deploy.outputs.deployment_time }}
 
 runs:
   using: 'composite'
@@ -225,3 +265,6 @@ runs:
         INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
         INPUT_SYNC_TYPE: ${{ inputs.sync_type }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        INPUT_BUILD_THEME_CHECK: ${{ inputs.build_theme_check }}
+        INPUT_BUILD_THEME_CHECK_AUTO_CORRECT: ${{ inputs.build_theme_check_auto_correct }}
+        INPUT_BUILD_THEME_CHECK_FAIL_ON_ERROR: ${{ inputs.build_theme_check_fail_on_error }}

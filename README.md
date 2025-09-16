@@ -3,174 +3,41 @@
 
 A powerful GitHub Action for automated Shopify theme deployment with staging/production workflows, live theme synchronization, and comprehensive backup management.
 
-## ✨ Features
+## ✨ Key Features
 
 - **🎭 Multi-Environment Deployment**: Separate staging and production workflows
 - **🔄 Live Theme Sync**: Pull live theme changes back to your repository with PR creation
 - **💾 Automatic Backups**: Create timestamped backups with retention policies
 - **🏷️ Version Management**: Automatic semantic versioning for production themes
 - **📦 Build Integration**: Support for npm, yarn, and pnpm build steps
+- **✅ Theme Check**: Built-in validation with Shopify Theme Check
+- **🎁 Release Packages**: Automatic theme packaging for GitHub releases
 - **🔔 Slack Notifications**: Rich notifications for deployment events
 - **🛡️ Safety Guards**: Prevent accidental live theme overwrites
-- **🔁 Smart Retry Logic**: Automatic retries with exponential backoff (never creates duplicate themes)
-- **📊 Rate Limit Handling**: Respect Shopify API rate limits
+- **🔁 Smart Retry Logic**: Automatic retries with exponential backoff
 - **🔒 Enterprise Security**: Fork protection, input sanitization, and secure secret handling
-- **🎛️ Flexible JSON Sync**: Control whether to sync JSON files during staging deployments
-- **🌿 Smart PR Creation**: Creates PRs to the current branch, not always main
 
-## 📋 Table of Contents
+## 📖 Documentation
 
-- [Quick Start](#quick-start)
-- [Inputs](#inputs)
-- [Outputs](#outputs)
-- [Usage Examples](#usage-examples)
-  - [Staging Deployment](#staging-deployment)
-  - [Production Deployment](#production-deployment)
-  - [Live Theme Sync](#live-theme-sync)
-- [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+- **[Configuration Options](docs/OPTIONS.md)** - Complete reference for all inputs and outputs
+- **[Examples](docs/EXAMPLES.md)** - Minimal and advanced usage examples
+- **[Security](docs/SECURITY.md)** - Security best practices and guidelines
+- **[Contributing](docs/CONTRIBUTING.md)** - Development and contribution guidelines
 
 ## 🚀 Quick Start
 
-### Basic Setup
+### 1. Set Up Secrets
 
-1. Add the action to your workflow:
+Add these secrets to your repository (Settings → Secrets → Actions):
 
-```yaml
-- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
-  with:
-    mode: staging
-    store: my-store.myshopify.com  # Optional if using SHOPIFY_STORE_URL secret
-  env:
-    SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
-    # SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Alternative to 'store' input
-    STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
-```
+- `SHOPIFY_CLI_THEME_TOKEN` - Your Shopify theme access token ([How to get it](#getting-a-theme-access-token))
+- `SHOPIFY_STORE_URL` - Your store domain (e.g., `my-store.myshopify.com`)
+- `STAGING_THEME_ID` - Your staging theme ID ([How to find it](#finding-theme-ids))
+- `PRODUCTION_THEME_ID` - Your production theme ID (for production mode)
 
-2. Set up required secrets in your repository:
-   - `SHOPIFY_CLI_THEME_TOKEN`: Your Shopify theme access token
-   - `SHOPIFY_STORE_URL`: (Optional) Store domain if not using 'store' input
-   - `STAGING_THEME_ID`: Your staging theme ID
-   - `PRODUCTION_THEME_ID`: (Optional) Your production theme ID
+### 2. Choose Your Deployment Type
 
-## 📥 Inputs
-
-### Required Inputs
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `mode` | Deployment mode: `staging`, `production`, or `sync-live` | - |
-| `store` | Shopify store domain (e.g., `my-store` or `my-store.myshopify.com`) | - |
-
-> **Note**: The `store` input can also be provided as the `SHOPIFY_STORE_URL` secret instead of plain text for enhanced security.
-
-### Optional Inputs
-
-#### Build Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `build_enabled` | Enable build step | `true` |
-| `build_node_version` | Node.js version for build | `20.x` |
-| `build_package_manager` | Package manager (`npm`, `yarn`, `pnpm`) | `npm` |
-| `build_command` | Build command to run | `npm ci && npm run build` |
-| `build_cwd` | Working directory for build | `.` |
-
-> ⚠️ **Important**: All inputs use underscores (`_`), not dots (`.`). For example, use `build_enabled`, not `build.enabled`.
-
-#### Branch Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `branch.staging` | Branch that triggers staging deployment | `staging` |
-| `branch.production` | Branch that triggers production deployment | `main,master` |
-
-#### JSON & Theme Push Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `json.pull_globs` | JSON files to pull from source theme (production or live) | `templates/*.json`<br>`templates/customers/*.json`<br>`sections/*.json`<br>`snippets/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
-| `json.sync_on_staging` | Enable JSON sync from source theme during staging deployment | `true` |
-| `push.extra_ignore` | Additional patterns to ignore during push | - |
-| `push.nodelete` | Prevent deletion of remote files | `false` |
-
-> **Note**: When JSON sync is enabled on staging:
-> - If `PRODUCTION_THEME_ID` is provided, it will be used as the source for JSON files
-> - Otherwise, the action will look for a published theme (role: main/live)
-> - This is particularly useful for development stores where there might not be a published theme
-> - You can also control JSON sync via the `SYNC_JSON_ON_STAGING` environment variable
-
-#### Backup Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `backup_enabled` | Enable theme backups | `true` |
-| `backup_retention` | Number of backups to keep | `3` |
-| `backup_prefix` | Backup name prefix | `BACKUP_` |
-| `backup_timezone` | Timezone for backup timestamps | `Asia/Manila` |
-
-#### Deployment Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `deploy_ignore_json_on_prod` | Ignore JSON files on production push | `true` |
-| `deploy_allow_live_push` | Allow pushing to live theme | `false` |
-
-#### Versioning Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `versioning_enabled` | Enable theme versioning | `true` |
-| `versioning_strategy` | Version bump strategy (`patch`, `minor`, `major`) | `patch` |
-
-#### Sync Configuration
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `sync_files` | Files to sync: `all` (sync all theme files), `json` (only JSON files), or `custom` (use `sync_only_globs`) | `all` |
-| `sync_only_globs` | File patterns for custom sync mode (only used when `sync_files` is `custom`) | - |
-| `sync_branch` | Branch for sync commits | `remote_changes` |
-| `sync_target_branch` | Target branch for PR (when `sync_type: pr`) | `staging` |
-| `sync_commit_message` | Commit message for sync | Dynamic based on mode |
-| `sync_type` | Sync type (`pr` for pull request or `push` for direct push) | `pr` |
-
-### Secrets
-
-Set these as environment variables:
-
-| Secret | Description | Required |
-|--------|-------------|----------|
-| `SHOPIFY_CLI_THEME_TOKEN` | Shopify theme access token | ✅ |
-| `SHOPIFY_STORE_URL` | Store domain (alternative to `store` input) | Optional |
-| `STAGING_THEME_ID` | Staging theme ID | For staging mode |
-| `PRODUCTION_THEME_ID` | Production theme ID | Optional |
-| `SLACK_WEBHOOK_URL` | Slack webhook for notifications | Optional |
-| `GITHUB_TOKEN` | GitHub token for PR creation | For sync with PR |
-| `SYNC_JSON_ON_STAGING` | Control JSON sync during staging (`true`/`false`) | Optional |
-
-## 📤 Outputs
-
-| Output | Description |
-|--------|-------------|
-| `theme_id` | ID of the deployed theme |
-| `theme_name` | Name of the deployed theme |
-| `preview_url` | Theme preview URL |
-| `editor_url` | Theme editor URL |
-| `version` | Theme version (if versioning enabled) |
-
-## 📖 Usage Examples
-
-> 📁 **Quick Start**: Find complete, ready-to-use workflows in the `examples/` directory:
-> - `simple-setup.yml` - Basic staging/production workflow
-> - `advanced-production.yml` - Full production with releases and safeguards  
-> - `live-sync.yml` - Sync with custom patterns and notifications
-> - `live-sync-minimal.yml` - Simplest sync configuration
-
-### Staging Deployment
-
-Deploy to staging when pushing to the `staging` branch:
+#### Staging Deployment
 
 ```yaml
 name: Deploy to Staging
@@ -178,45 +45,25 @@ name: Deploy to Staging
 on:
   push:
     branches: [staging]
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: staging
-          build_enabled: true
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
           STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
 ```
 
-> 💡 **See also**: `examples/simple-setup.yml` for a complete workflow with both staging and production
+[View full example with all options →](examples/staging-maximum.yml)
 
-#### Staging Without JSON Sync
-
-To deploy to staging without syncing JSON files from the live theme:
-
-```yaml
-- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
-  with:
-    mode: staging
-    json_sync_on_staging: false  # Disable JSON sync
-  env:
-    SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
-    STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
-    # Or use environment variable:
-    # SYNC_JSON_ON_STAGING: false
-```
-
-### Production Deployment
-
-Deploy to production with backups and versioning:
+#### Production Deployment
 
 ```yaml
 name: Deploy to Production
@@ -224,109 +71,77 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: production
-          build_enabled: true
-          backup_enabled: true
-          versioning_enabled: true
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
           PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
 ```
 
-> 💡 **See also**: 
-> - `examples/advanced-production.yml` for release management, custom retention, and deployment safeguards
-> - `.github/workflows/deploy-production.yml.example` for enterprise-grade production deployment with environment protection
+[View full example with all options →](examples/production-maximum.yml)
 
-### Live Theme Sync
-
-Sync live theme changes back to repository:
+#### Live Theme Sync
 
 ```yaml
 name: Sync Live Theme
 
 on:
-  schedule:
-    - cron: '0 0 * * *'  # Daily at midnight
-  workflow_dispatch:       # Manual trigger
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: sync-live
-          sync_files: all  # Options: 'all', 'json', or 'custom'
-          sync_type: pr  # Create PR for review
-          sync_branch: remote_changes  # Branch to commit changes to
-          sync_target_branch: staging  # Target branch for PR
-          # For custom mode, specify patterns:
-          # sync_files: custom
-          # sync_only_globs: |
-          #   templates/*.json
-          #   sections/*.liquid
-          #   assets/*.css
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-#### How Live Sync Works
+[View full example with all options →](examples/sync-maximum.yml)
 
-1. **Pulls changes** from your live Shopify theme
-2. **Commits changes** to the `sync_branch` (default: `remote_changes`)
-3. **Creates or updates a PR** from `sync_branch` to `sync_target_branch` (default: `staging`)
-4. **Prevents duplicate PRs** - if a PR already exists, it updates the existing one
+### 3. Deploy
 
-> **Important**: The `remote_changes` branch should NOT be protected to allow the action to push changes directly.
+Push to your configured branch:
+- Push to `staging` → Deploys to staging theme
+- Push to `main` → Deploys to production with backups
+- Run workflow manually → Sync live theme changes
 
-> 💡 **Tip**: See example workflows:
-> - `examples/live-sync-minimal.yml` for basic setup
-> - `examples/live-sync.yml` for automated schedules and PR creation  
-> - `examples/live-sync-comprehensive.yml` for advanced configuration with workflow inputs, Slack integration, and detailed PR comments
+## 🎯 Use Cases
+
+### Staging Deployment
+Deploy to a staging theme for testing before production. Optionally syncs JSON files from live theme to keep content in sync.
+
+### Production Deployment
+Deploy to production with automatic backups, versioning, and optional Slack notifications. Preserves merchant customizations.
+
+### Live Theme Sync
+Pull changes made directly in Shopify admin back to your repository. Creates PRs for review or pushes directly to a branch.
+
+> 📚 See [EXAMPLES.md](docs/EXAMPLES.md) for more examples and advanced scenarios.
 
 ## ⚙️ Configuration
 
-### Theme Access Token
+### Getting a Theme Access Token
 
-1. Go to your Shopify admin panel
-2. Navigate to **Apps** → **Develop apps**
-3. Create a private app with theme management permissions
-4. Copy the theme access token
-5. Add it as `SHOPIFY_CLI_THEME_TOKEN` in your repository secrets
-
-### Store URL Configuration
-
-You have two options for providing your store URL:
-
-**Option 1: Plain text in workflow (less secure)**
-```yaml
-with:
-  store: my-store.myshopify.com
-```
-
-**Option 2: GitHub Secret (recommended for security)**
-```yaml
-env:
-  SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
-# Omit 'store' input when using this method
-```
-
-> **Security Note**: Using `SHOPIFY_STORE_URL` as a secret prevents your store domain from being exposed in public repositories.
+1. Go to your Shopify admin → **Apps** → **Develop apps**
+2. Create a private app with theme management permissions
+3. Copy the theme access token
+4. Add as `SHOPIFY_CLI_THEME_TOKEN` secret
 
 ### Finding Theme IDs
 
@@ -336,180 +151,83 @@ npm install -g @shopify/cli @shopify/theme
 
 # List themes
 shopify theme list --store=my-store.myshopify.com
-
-# Output:
-# ID          NAME                  STATUS
-# 123456789   Staging               unpublished
-# 987654321   Production            live
 ```
 
-### Slack Notifications
+### Available Modes
 
-1. Create a Slack webhook:
-   - Go to https://api.slack.com/apps
-   - Create new app → From scratch
-   - Add **Incoming Webhooks** feature
-   - Create webhook for your channel
-2. Add webhook URL as `SLACK_WEBHOOK_URL` secret
+| Mode | Description | Required Secrets |
+|------|-------------|------------------|
+| `staging` | Deploy to staging theme | `STAGING_THEME_ID` |
+| `production` | Deploy to production with backups | `PRODUCTION_THEME_ID` |
+| `sync-live` | Pull live changes to repository | `GITHUB_TOKEN` |
 
-## 🔧 Advanced Configuration
+> 🔧 See [OPTIONS.md](docs/OPTIONS.md) for complete configuration reference.
 
-### Custom Build Steps
+## 🛡️ Security
 
-```yaml
-- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
-  with:
-    mode: staging
-    store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    build_enabled: true
-    build_node_version: 18
-    build_package_manager: yarn
-    build_command: |
-      yarn install --frozen-lockfile
-      yarn build:css
-      yarn build:js
-    build_cwd: ./theme
-```
+- **Never commit tokens** - Always use GitHub Secrets
+- **Use branch protection** - Require reviews for production
+- **Enable notifications** - Monitor deployments with Slack
+- **Regular token rotation** - Rotate tokens every 90 days
 
-### Selective File Sync
+> 🔒 See [SECURITY.md](docs/SECURITY.md) for detailed security guidelines.
 
-```yaml
-- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
-  with:
-    mode: sync-live
-    store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    sync_files: custom  # Use custom patterns
-    sync_only_globs: |
-      config/settings_data.json
-      templates/product.json
-      sections/header.json
-```
+## 📁 Example Workflows
 
-### Production Safeguards
+Ready-to-use workflow examples are available in the `examples/` directory:
 
-```yaml
-- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
-  with:
-    mode: production
-    store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    deploy_allow_live_push: false  # Require PRODUCTION_THEME_ID
-    deploy_ignore_json_on_prod: true  # Preserve merchant customizations
-```
+### Minimal Examples (Start Here)
+- [`staging-minimal.yml`](examples/staging-minimal.yml) - Basic staging setup
+- [`production-minimal.yml`](examples/production-minimal.yml) - Basic production setup
+- [`sync-minimal.yml`](examples/sync-minimal.yml) - Basic sync setup
+
+### Maximum Examples (All Options)
+- [`staging-maximum.yml`](examples/staging-maximum.yml) - Full staging configuration
+- [`production-maximum.yml`](examples/production-maximum.yml) - Full production configuration
+- [`sync-maximum.yml`](examples/sync-maximum.yml) - Full sync configuration
+
+> 💡 **Tip**: Start with minimal examples and add options as needed. Maximum examples show all available options with detailed comments.
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-#### "Theme not found" Error
-- Verify the theme ID is correct
-- Ensure the theme exists in your store
-- Check token permissions
+**Theme not found**: Verify theme ID and token permissions
 
-#### "Rate limit exceeded" Error
-- The action automatically retries with exponential backoff
-- Consider reducing deployment frequency
-- Check Shopify API status
+**Rate limits**: Action automatically retries with exponential backoff
 
-#### Build Failures
-- Ensure dependencies are properly specified
-- Check Node.js version compatibility
-- Verify build command syntax
+**Build failures**: Check Node.js version and build command
 
-#### Sync Conflicts
-- Review PR for conflicts
-- Manually resolve if needed
-- Consider adjusting sync frequency
+**Sync conflicts**: Review PRs and resolve manually
 
 ### Debug Mode
 
-Enable debug logs:
+Enable detailed logs:
 
 ```yaml
 - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
   with:
     mode: staging
-    store: my-store
-    dry_run: true  # Test without making changes
+    dry_run: true  # Test without changes
   env:
     ACTIONS_STEP_DEBUG: true
 ```
 
-## 🔒 Security
-
-### Best Practices
-
-- **Never commit tokens**: Always use GitHub Secrets
-- **Hide store URLs**: Use `SHOPIFY_STORE_URL` secret instead of plain text
-- **Limit token scope**: Only grant necessary permissions
-- **Review PRs**: Manually review sync PRs before merging
-- **Use branch protection**: Require reviews for production branches
-- **Audit deployments**: Enable Slack notifications for visibility
-
-### Recommended Secret Setup
-
-For maximum security, use secrets for all sensitive data:
-
-```yaml
-env:
-  SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
-  SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Hide store domain
-  STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
-  PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-```
-
-This approach ensures no sensitive information is exposed in your workflow files.
-
 ## 📈 Performance
 
-The action includes:
-- **Parallel operations** where possible
-- **Automatic retries** with exponential backoff
-- **Rate limit handling** to respect Shopify API limits
+- **Parallel operations** for speed
+- **Smart retries** with exponential backoff
+- **Rate limit handling** for Shopify API
 - **Efficient file transfers** using glob patterns
-- **Smart caching** of Shopify CLI installation
+- **Cached dependencies** for faster builds
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new features
-4. Ensure all tests pass
-5. Submit a pull request
-
-## 🔒 Security
-
-### Security Features
-
-- **Fork Protection**: Workflows automatically skip on forked PRs to prevent secret exposure
-- **Input Sanitization**: All inputs are sanitized to prevent injection attacks
-- **Secret Management**: All sensitive data stored in GitHub Secrets
-- **HTTPS Only**: All API communications use HTTPS with SSL verification
-- **Token Scoping**: Support for minimal permission tokens
-- **Audit Logging**: All deployments logged in GitHub Actions
-
-### Best Practices
-
-1. **Use GitHub Environments** for production with protection rules
-2. **Enable manual approval** for production deployments
-3. **Rotate tokens regularly** (every 90 days recommended)
-4. **Use separate tokens** for staging and production
-5. **Monitor deployments** with Slack notifications
-6. **Test with dry-run** before production deployments
-
-See [SECURITY.md](SECURITY.md) for detailed security guidelines and production deployment examples.
+We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Shopify CLI](https://github.com/Shopify/cli) for theme management
-- [GitHub Actions](https://github.com/features/actions) for automation
-- Community contributors and testers
 
 ## 📞 Support
 
@@ -519,4 +237,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-Made with ❤️ by shoplab.cc for the Shopify developer community
+Made with ❤️ by [ShopLab](https://shoplab.cc) for the Shopify developer community

@@ -12,7 +12,7 @@ async function installShopifyCLI() {
     core.info('Installing Shopify CLI...');
 
     // Install @shopify/cli and @shopify/theme globally
-    await exec.exec('npm', ['install', '-g', '@shopify/cli', '@shopify/theme']);
+    await exec.exec('npm', ['install', '-g', '@shopify/cli@latest']);
 
     // Verify installation
     const version = await getShopifyCLIVersion();
@@ -187,6 +187,13 @@ async function getThemeById(token, store, themeId) {
   }
 
   try {
+    // First try using theme info for efficiency
+    const themeInfo = await getThemeInfo(token, store, themeId);
+    if (themeInfo) {
+      return themeInfo;
+    }
+
+    // Fallback to listing all themes if info doesn't work
     const themes = await listThemes(token, store);
     const theme = themes.find((t) => t.id === parseInt(themeId, 10));
 
@@ -365,6 +372,216 @@ async function pushThemeFiles(token, store, themeId, options = {}) {
   }
 }
 
+/**
+ * Get theme info using theme info command
+ * @param {string} token - Theme access token
+ * @param {string} store - Store domain
+ * @param {string} themeId - Theme ID
+ * @returns {Promise<Object|null>} Theme object or null
+ */
+async function getThemeInfo(token, store, themeId) {
+  const storeDomain = normalizeStore(store);
+  let output = '';
+
+  const options = {
+    listeners: {
+      stdout: (data) => {
+        output += data.toString();
+      },
+    },
+    env: {
+      ...process.env,
+      SHOPIFY_CLI_THEME_TOKEN: token,
+      SHOPIFY_FLAG_STORE: storeDomain,
+    },
+    silent: true,
+  };
+
+  try {
+    await exec.exec(
+      'shopify',
+      ['theme', 'info', '--store', storeDomain, '--theme', themeId, '--json'],
+      options
+    );
+
+    // Parse JSON output
+    const themeInfo = JSON.parse(output);
+    
+    if (themeInfo && themeInfo.theme) {
+      const theme = themeInfo.theme;
+      core.info(`Found theme via info: ${theme.name} (ID: ${theme.id})`);
+      return theme;
+    }
+    
+    return null;
+  } catch (error) {
+    // Theme info might not exist or theme not found
+    core.debug(`Theme info failed for ${themeId}: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Package theme into a ZIP file
+ * @param {string} themePath - Path to theme directory
+ * @param {string} outputPath - Output ZIP file path (optional)
+ * @returns {Promise<string>} Path to created ZIP file
+ */
+async function packageTheme(themePath = '.', outputPath = null) {
+  let output = '';
+  
+  const args = ['theme', 'package', '--path', themePath];
+  
+  if (outputPath) {
+    args.push('--output', outputPath);
+  }
+
+  const options = {
+    listeners: {
+      stdout: (data) => {
+        output += data.toString();
+      },
+    },
+  };
+
+  try {
+    core.info(`Packaging theme from ${themePath}...`);
+    await exec.exec('shopify', args, options);
+    
+    // Extract ZIP file path from output
+    const zipPathMatch = output.match(/Theme packaged to: (.+\.zip)/i);
+    const zipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
+    
+    core.info(`✅ Theme packaged to: ${zipPath}`);
+    return zipPath;
+  } catch (error) {
+    core.error(`Failed to package theme: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Run theme check for linting
+ * @param {string} themePath - Path to theme directory
+ * @param {Object} options - Check options
+ * @returns {Promise<Object>} Check results
+ */
+async function checkTheme(themePath = '.', options = {}) {
+  let output = '';
+  let errorOutput = '';
+  
+  const args = ['theme', 'check', '--path', themePath];
+  
+  // Add auto-correct flag if specified
+  if (options.autoCorrect) {
+    args.push('--auto-correct');
+  }
+  
+  // Add specific check categories if specified
+  if (options.category) {
+    args.push('--category', options.category);
+  }
+  
+  // Output format
+  if (options.json) {
+    args.push('--json');
+  }
+
+  const execOptions = {
+    listeners: {
+      stdout: (data) => {
+        output += data.toString();
+      },
+      stderr: (data) => {
+        errorOutput += data.toString();
+      },
+    },
+    ignoreReturnCode: true, // Theme check returns non-zero if issues found
+  };
+
+  try {
+    core.info(`Running theme check on ${themePath}...`);
+    const exitCode = await exec.exec('shopify', args, execOptions);
+    
+    const hasErrors = exitCode !== 0;
+    
+    if (options.json) {
+      try {
+        const results = JSON.parse(output);
+        return {
+          success: !hasErrors,
+          results,
+        };
+      } catch (parseError) {
+        core.debug(`Failed to parse theme check JSON: ${parseError.message}`);
+      }
+    }
+    
+    return {
+      success: !hasErrors,
+      output,
+      errors: errorOutput,
+    };
+  } catch (error) {
+    core.error(`Failed to run theme check: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Open theme and get URLs
+ * @param {string} token - Theme access token
+ * @param {string} store - Store domain
+ * @param {string} themeId - Theme ID
+ * @returns {Promise<Object>} Theme URLs
+ */
+async function openTheme(token, store, themeId) {
+  const storeDomain = normalizeStore(store);
+  let output = '';
+
+  const options = {
+    listeners: {
+      stdout: (data) => {
+        output += data.toString();
+      },
+    },
+    env: {
+      ...process.env,
+      SHOPIFY_CLI_THEME_TOKEN: token,
+      SHOPIFY_FLAG_STORE: storeDomain,
+    },
+  };
+
+  try {
+    await exec.exec(
+      'shopify',
+      ['theme', 'open', '--store', storeDomain, '--theme', themeId],
+      options
+    );
+    
+    // Parse URLs from output
+    const previewMatch = output.match(/Preview: (.+)/i);
+    const editorMatch = output.match(/Editor: (.+)/i);
+    
+    const urls = {
+      preview: previewMatch ? previewMatch[1].trim() : `https://${storeDomain}/?preview_theme_id=${themeId}`,
+      editor: editorMatch ? editorMatch[1].trim() : `https://${storeDomain}/admin/themes/${themeId}/editor`,
+    };
+    
+    core.info(`Theme URLs - Preview: ${urls.preview}`);
+    core.info(`Theme URLs - Editor: ${urls.editor}`);
+    
+    return urls;
+  } catch (error) {
+    // Fallback to constructed URLs if open fails
+    core.debug(`Theme open failed, using fallback URLs: ${error.message}`);
+    return {
+      preview: `https://${storeDomain}/?preview_theme_id=${themeId}`,
+      editor: `https://${storeDomain}/admin/themes/${themeId}/editor`,
+    };
+  }
+}
+
 module.exports = {
   installShopifyCLI,
   getShopifyCLIVersion,
@@ -372,7 +589,11 @@ module.exports = {
   listThemes,
   getLiveTheme,
   getThemeById,
+  getThemeInfo,
   ensureThemeExists,
   pullThemeFiles,
   pushThemeFiles,
+  packageTheme,
+  checkTheme,
+  openTheme,
 };

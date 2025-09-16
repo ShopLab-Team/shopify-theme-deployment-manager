@@ -1,0 +1,33 @@
+# Staging Deployment - Minimal Configuration
+# This is the absolute minimum required to deploy to a staging theme.
+# For all available options, see: ../docs/OPTIONS.md
+
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]  # Trigger on push to staging branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout your repository code
+      - uses: actions/checkout@v4
+      
+      # Deploy to staging theme
+      - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: staging  # Required: deployment mode
+        env:
+          # Required: Shopify authentication token
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          
+          # Required: Your store URL (e.g., my-store.myshopify.com)
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
+          
+          # Required: ID of your staging theme
+          STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
+          
+          # Optional: Add for automatic Slack notifications
+          # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

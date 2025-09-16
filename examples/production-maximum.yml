@@ -1,0 +1,216 @@
+# Production Deployment - Maximum Configuration
+# This example includes ALL available options for production deployment.
+# You can delete any options you don't need - the action will use sensible defaults.
+# For detailed documentation of each option, see: ../docs/OPTIONS.md
+
+name: Deploy to Production (Full Options)
+
+on:
+  push:
+    branches: [main, master]  # Multiple production branches
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      version_strategy:
+        description: 'Version bump strategy'
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      skip_backup:
+        description: 'Skip backup creation'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Perform dry run only'
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production  # GitHub environment for approvals/secrets
+    
+    steps:
+      # Checkout with full history for versioning
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for version tagging
+      
+      # Cache dependencies for faster builds
+      - uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      # Deploy to production theme with all options
+      - name: Deploy to Production
+        id: deploy
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          # Core Configuration (Required)
+          mode: production
+          store: my-store.myshopify.com  # Can also use SHOPIFY_STORE_URL secret
+          
+          # Branch Configuration
+          branch_staging: staging  # Staging branch (default: staging)
+          branch_production: main,master  # Production branches (default: main,master)
+          
+          # Build Configuration
+          build_enabled: true  # Enable build step (default: true)
+          build_node_version: 20.x  # Node version (default: 20.x)
+          build_package_manager: npm  # npm, yarn, or pnpm (default: npm)
+          build_command: |  # Custom build command
+            npm ci --production=false
+            npm run lint
+            npm run test:ci
+            npm run build:production
+            npm run optimize
+          build_cwd: .  # Working directory for build (default: .)
+          build_theme_check: true  # Run Theme Check after build (default: false)
+          build_theme_check_auto_correct: false  # Auto-fix issues (default: false)
+          build_theme_check_fail_on_error: true  # Fail on errors (default: false)
+          
+          # JSON Pull Configuration
+          json_pull_globs: |  # Files to pull from live theme (default shown)
+            templates/*.json
+            templates/customers/*.json
+            locales/*.json
+            config/settings_data.json
+            sections/*.json
+            snippets/*.json
+          json_sync_on_staging: true  # Not used in production (default: true)
+          
+          # Push Configuration
+          push_extra_ignore: |  # Additional files to ignore during push
+            *.map
+            *.test.js
+            docs/**
+            tests/**
+            .github/**
+            src/**
+            node_modules/**
+          push_nodelete: true  # Safer: don't delete remote files (default: false)
+          
+          # Backup Configuration
+          backup_enabled: ${{ !inputs.skip_backup }}  # Enable backups (default: true)
+          backup_retention: 10  # Keep 10 backups (default: 3)
+          backup_prefix: 'PROD_BACKUP_'  # Custom prefix (default: BACKUP_)
+          backup_timezone: America/New_York  # Eastern timezone (default: UTC)
+          
+          # Deploy Configuration
+          deploy_ignore_json_on_prod: true  # Preserve merchant customizations (default: true)
+          deploy_allow_live_push: false  # Require PRODUCTION_THEME_ID (default: false)
+          
+          # Versioning Configuration
+          versioning_enabled: true  # Enable semantic versioning (default: true)
+          versioning_strategy: ${{ inputs.version_strategy || 'patch' }}  # Version bump type
+          
+          # Optional Features
+          dry_run: ${{ inputs.dry_run || false }}  # Test without deploying
+        
+        env:
+          # Required Secrets
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Optional if using 'store' input
+          PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
+          
+          # Optional Secrets
+          STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}  # Not used in production
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # For notifications (handled internally by action)
+      
+      # ============================================================
+      # OPTIONAL: GitHub Release Creation
+      # The action creates a theme package ZIP file, but creating a 
+      # GitHub release is optional and controlled by your workflow.
+      # You can remove this section if you don't need releases.
+      # ============================================================
+      
+      # Generate release notes from recent commits
+      - name: Generate Release Notes
+        id: release_notes
+        if: success() && !inputs.dry_run && steps.deploy.outputs.package_path
+        run: |
+          # Get commits since last tag (or last 20 if no tags)
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🚀 Production Deployment" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "- **Theme ID**: ${{ steps.deploy.outputs.theme_id }}" >> $GITHUB_OUTPUT
+          echo "- **Theme Name**: ${{ steps.deploy.outputs.theme_name }}" >> $GITHUB_OUTPUT
+          echo "- **Preview**: ${{ steps.deploy.outputs.preview_url }}" >> $GITHUB_OUTPUT
+          echo "- **Editor**: ${{ steps.deploy.outputs.editor_url }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📝 Changes in this release" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          
+          if [ -z "$LAST_TAG" ]; then
+            # No previous tags, get last 20 commits
+            git log --oneline -20 --pretty=format:"- %s" >> $GITHUB_OUTPUT
+          else
+            # Get commits since last tag
+            git log $LAST_TAG..HEAD --oneline --pretty=format:"- %s" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      # Create GitHub Release with theme package
+      - name: Create Release (Optional)
+        id: create_release
+        if: success() && !inputs.dry_run && steps.deploy.outputs.package_path
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.deploy.outputs.version }}
+          release_name: Production Release v${{ steps.deploy.outputs.version }}
+          body: ${{ steps.release_notes.outputs.RELEASE_BODY }}
+          draft: false
+          prerelease: false
+      
+      # Upload theme package to release
+      - name: Upload Theme Package to Release (Optional)
+        if: success() && !inputs.dry_run && steps.deploy.outputs.package_path && steps.create_release.outputs.upload_url
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.deploy.outputs.package_path }}
+          asset_name: theme-v${{ steps.deploy.outputs.version }}.zip
+          asset_content_type: application/zip
+      
+      # Display deployment results
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "### 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "#### 🧪 DRY RUN MODE" >> $GITHUB_STEP_SUMMARY
+            echo "No actual deployment was performed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "#### 📊 Deployment Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Theme ID** | ${{ steps.deploy.outputs.theme_id }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Theme Name** | ${{ steps.deploy.outputs.theme_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.deploy.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Preview URL** | ${{ steps.deploy.outputs.preview_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Editor URL** | ${{ steps.deploy.outputs.editor_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### 🔧 Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backups**: ${{ !inputs.skip_backup && 'Enabled' || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Strategy**: ${{ inputs.version_strategy || 'patch' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+    

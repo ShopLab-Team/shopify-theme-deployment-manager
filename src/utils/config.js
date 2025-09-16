@@ -56,6 +56,9 @@ function getConfig() {
       packageManager: getInput('build_package_manager') || 'npm',
       command: getInput('build_command') || 'npm ci && npm run build',
       cwd: getInput('build_cwd') || '.',
+      themeCheck: parseBoolean(getInput('build_theme_check')),
+      themeCheckAutoCorrect: parseBoolean(getInput('build_theme_check_auto_correct')),
+      themeCheckFailOnError: parseBoolean(getInput('build_theme_check_fail_on_error')),
     },
 
     // JSON configuration

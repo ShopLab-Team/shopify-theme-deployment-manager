@@ -1,0 +1,283 @@
+# Live Theme Sync - Maximum Configuration
+# This example includes ALL available options for live theme synchronization.
+# You can delete any options you don't need - the action will use sensible defaults.
+# For detailed documentation of each option, see: ../docs/OPTIONS.md
+
+name: Sync Live Theme (Full Options)
+
+on:
+  # Scheduled sync (cron expressions)
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+    # - cron: '0 2 * * *'  # Daily at 2 AM UTC
+    # - cron: '0 0 * * 1'  # Weekly on Monday at midnight
+    # - cron: '*/5 * * * *'  # Every 5 minutes (minimum allowed by GitHub)
+  
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: 'Sync type'
+        type: choice
+        default: pr
+        options:
+          - pr    # Create pull request (recommended)
+          - push  # Direct push to branch
+      target_branch:
+        description: 'Target branch for PR'
+        type: choice
+        default: staging
+        options:
+          - staging
+          - main
+          - develop
+      sync_files:
+        description: 'What to sync'
+        type: choice
+        default: json
+        options:
+          - all     # Sync all theme files
+          - json    # Only JSON files
+          - custom  # Use custom patterns
+      dry_run:
+        description: 'Perform dry run only'
+        type: boolean
+        default: false
+
+# Permissions for PR creation
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    # Prevent concurrent syncs
+    concurrency:
+      group: live-sync
+      cancel-in-progress: false
+    
+    steps:
+      # Checkout with full history for better diff
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Full history for PR creation
+          ref: ${{ inputs.target_branch || 'staging' }}
+      
+      # Configure Git for commits
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      # Sync from live theme with all options
+      - name: Sync Live Theme
+        id: sync
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          # Core Configuration (Required)
+          mode: sync-live
+          store: my-store.myshopify.com  # Can also use SHOPIFY_STORE_URL secret
+          
+          # Sync Configuration
+          sync_files: ${{ inputs.sync_files || 'json' }}  # What to sync (default: all)
+          sync_only_globs: |  # Custom patterns when sync_files is 'custom'
+            templates/*.json
+            templates/customers/*.json
+            templates/metaobject/*.json
+            sections/*.json
+            snippets/*.json
+            config/settings_data.json
+            config/settings_schema.json
+            locales/*.json
+            locales/**/*.json
+            assets/*.css.liquid
+            assets/*.js.liquid
+            layout/*.liquid
+          sync_branch: remote_changes  # Branch for sync commits (default: remote_changes)
+          sync_target_branch: ${{ inputs.target_branch || 'staging' }}  # PR target (default: staging)
+          sync_commit_message: |  # Custom commit message
+            chore(sync): import live theme changes
+            
+            Automated sync from production theme
+            Timestamp: ${{ github.event.repository.updated_at }}
+            Workflow: ${{ github.workflow }} #${{ github.run_number }}
+          sync_type: ${{ inputs.sync_type || 'pr' }}  # pr or push (default: pr)
+          
+          # Optional Features
+          dry_run: ${{ inputs.dry_run || false }}  # Test without syncing
+        
+        env:
+          # Required Secrets
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Optional if using 'store' input
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional Secrets
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # For notifications (handled internally by action)
+      
+      # Add detailed PR comment
+      - name: Comment on PR
+        if: steps.sync.outputs.pull_request_url && !inputs.dry_run
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prUrl = '${{ steps.sync.outputs.pull_request_url }}';
+            const prNumber = prUrl.split('/').pop();
+            
+            const comment = `## 📊 Live Theme Sync Report
+            
+            ### 📈 Sync Statistics
+            | Metric | Value |
+            |--------|-------|
+            | **Files Changed** | ${{ steps.sync.outputs.files_count || '0' }} |
+            | **Sync Duration** | ${{ steps.sync.outputs.sync_time || 'N/A' }}s |
+            | **Theme ID** | ${{ steps.sync.outputs.theme_id || 'N/A' }} |
+            | **Theme Name** | ${{ steps.sync.outputs.theme_name || 'N/A' }} |
+            | **Sync Type** | ${{ inputs.sync_files || 'json' }} |
+            
+            ### 🔍 Review Checklist
+            - [ ] Review all JSON changes for merchant customizations
+            - [ ] Check for any unexpected theme settings changes
+            - [ ] Verify translations in locale files
+            - [ ] Ensure no development/test data is included
+            - [ ] Confirm changes match expected live theme state
+            - [ ] Test on staging theme before merging
+            
+            ### ⚠️ Important Notes
+            - These changes are from the **live production theme**
+            - Merging will overwrite local files with production versions
+            - Always test on staging before merging to main
+            - Consider the impact on active development work
+            
+            ### 📝 Files Changed
+            <details>
+            <summary>Click to expand file list</summary>
+            
+            \`\`\`
+            ${{ steps.sync.outputs.changed_files || 'No file list available' }}
+            \`\`\`
+            
+            </details>
+            
+            ---
+            *Automated by GitHub Actions Workflow: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*
+            *Triggered by: ${{ github.event_name }} event*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(prNumber),
+              body: comment
+            });
+      
+      # Add labels to PR
+      - name: Label PR
+        if: steps.sync.outputs.pull_request_url && !inputs.dry_run
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prUrl = '${{ steps.sync.outputs.pull_request_url }}';
+            const prNumber = prUrl.split('/').pop();
+            
+            const labels = [
+              'theme-sync',
+              'automated',
+              'production-changes',
+              'review-required'
+            ];
+            
+            // Add sync type label
+            const syncType = '${{ inputs.sync_files || 'json' }}';
+            if (syncType === 'all') labels.push('full-sync');
+            else if (syncType === 'json') labels.push('json-sync');
+            else if (syncType === 'custom') labels.push('custom-sync');
+            
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                labels: labels
+              });
+            } catch (error) {
+              console.log('Some labels might not exist:', error.message);
+            }
+      
+      # Auto-assign reviewers
+      - name: Assign Reviewers
+        if: steps.sync.outputs.pull_request_url && !inputs.dry_run
+        uses: actions/github-script@v6
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prUrl = '${{ steps.sync.outputs.pull_request_url }}';
+            const prNumber = prUrl.split('/').pop();
+            
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: parseInt(prNumber),
+                reviewers: ['lead-dev', 'theme-reviewer'],  # Add your reviewer usernames
+                team_reviewers: ['theme-team']  # Add team slugs if using teams
+              });
+            } catch (error) {
+              console.log('Could not assign all reviewers:', error.message);
+            }
+
+      # Generate job summary
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "## 📊 Live Theme Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "### 🧪 DRY RUN MODE" >> $GITHUB_STEP_SUMMARY
+            echo "No actual sync was performed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### 📈 Sync Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ${{ steps.sync.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Files Changed** | ${{ steps.sync.outputs.files_count || '0' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync Duration** | ${{ steps.sync.outputs.sync_time || 'N/A' }}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync Type** | ${{ inputs.sync_files || 'json' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync Method** | ${{ inputs.sync_type || 'pr' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ steps.sync.outputs.branch || 'remote_changes' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **PR URL** | ${{ steps.sync.outputs.pull_request_url || 'No PR created' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🏪 Theme Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Store**: ${{ vars.SHOPIFY_STORE || 'my-store' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Theme ID**: ${{ steps.sync.outputs.theme_id || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Theme Name**: ${{ steps.sync.outputs.theme_name || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🔧 Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Branch**: ${{ inputs.target_branch || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+      
+      # Error handling and debugging
+      - name: Debug Information
+        if: failure()
+        run: |
+          echo "::error::Live theme sync failed"
+          echo "### 🔍 Debugging Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Common issues to check:" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Invalid SHOPIFY_CLI_THEME_TOKEN" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ No live theme found in the store" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Git conflicts in the sync branch" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Rate limiting from Shopify API" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Insufficient GitHub permissions for PR creation" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Protected branch restrictions" >> $GITHUB_STEP_SUMMARY

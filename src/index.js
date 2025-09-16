@@ -90,6 +90,7 @@ async function run() {
       if (result.previewUrl) core.setOutput('preview_url', result.previewUrl);
       if (result.editorUrl) core.setOutput('editor_url', result.editorUrl);
       if (result.version) core.setOutput('version', result.version);
+      if (result.packagePath) core.setOutput('package_path', result.packagePath);
     }
 
     core.info('✅ Action completed successfully!');

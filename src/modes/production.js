@@ -1,5 +1,5 @@
 const core = require('@actions/core');
-const { getLiveTheme, getThemeById, pushThemeFiles } = require('../utils/shopify-cli');
+const { getLiveTheme, getThemeById, pushThemeFiles, packageTheme, openTheme } = require('../utils/shopify-cli');
 const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../utils/backup');
 const { normalizeStore } = require('../utils/validators');
 const { buildAssets } = require('../utils/build');
@@ -190,19 +190,50 @@ async function productionDeploy(config) {
     // Calculate deployment time
     const deploymentTime = Math.round((Date.now() - startTime) / 1000);
 
+    // Get proper theme URLs using theme open command
+    let previewUrl, editorUrl;
+    try {
+      const urls = await openTheme(
+        config.secrets.themeToken,
+        config.store,
+        productionTheme.id.toString()
+      );
+      previewUrl = urls.preview;
+      editorUrl = urls.editor;
+    } catch (error) {
+      // Fallback to constructed URLs
+      previewUrl =
+        productionTheme.role === 'main'
+          ? `https://${storeDomain}`
+          : `https://${storeDomain}?preview_theme_id=${productionTheme.id}`;
+      editorUrl = `https://${storeDomain}/admin/themes/${productionTheme.id}/editor`;
+    }
+
+    // Package theme for release artifact (optional)
+    let packagePath = null;
+    if (config.versioning.enabled) {
+      try {
+        core.startGroup('📦 Creating theme package for release');
+        packagePath = await packageTheme('.', `theme-v${newVersion || '1.0.0'}.zip`);
+        core.info(`Theme package created: ${packagePath}`);
+        core.setOutput('package_path', packagePath); // Make it available as output
+        core.endGroup();
+      } catch (error) {
+        core.warning(`Failed to create theme package: ${error.message}`);
+      }
+    }
+
     // Prepare result
     const result = {
       themeId: productionTheme.id.toString(),
       themeName: productionTheme.name,
       version: newVersion,
-      previewUrl:
-        productionTheme.role === 'main'
-          ? `https://${storeDomain}`
-          : `https://${storeDomain}?preview_theme_id=${productionTheme.id}`,
-      editorUrl: `https://${storeDomain}/admin/themes/${productionTheme.id}/editor`,
+      previewUrl,
+      editorUrl,
       backupId: backupTheme?.id,
       backupName: backupTheme?.name,
       deploymentTime,
+      packagePath,
     };
 
     // Step 7: Send Slack notification if configured

@@ -1,0 +1,33 @@
+# Production Deployment - Minimal Configuration
+# This is the absolute minimum required to deploy to production.
+# For all available options, see: ../docs/OPTIONS.md
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]  # Trigger on push to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout your repository code
+      - uses: actions/checkout@v4
+      
+      # Deploy to production theme
+      - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: production  # Required: deployment mode
+        env:
+          # Required: Shopify authentication token
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          
+          # Required: Your store URL (e.g., my-store.myshopify.com)
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
+          
+          # Required: ID of your production theme
+          PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
+          
+          # Optional: Add for automatic Slack notifications
+          # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

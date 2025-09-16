@@ -1,0 +1,32 @@
+# Live Theme Sync - Minimal Configuration
+# This is the absolute minimum required to sync changes from your live theme.
+# For all available options, see: ../docs/OPTIONS.md
+
+name: Sync Live Theme
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout your repository code
+      - uses: actions/checkout@v4
+      
+      # Sync from live theme
+      - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          mode: sync-live  # Required: sync mode
+        env:
+          # Required: Shopify authentication token
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          
+          # Required: Your store URL (e.g., my-store.myshopify.com)
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
+          
+          # Required: GitHub token for PR creation
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: Add for automatic Slack notifications
+          # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

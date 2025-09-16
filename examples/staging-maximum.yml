@@ -1,0 +1,117 @@
+# Staging Deployment - Maximum Configuration
+# This example includes ALL available options for staging deployment.
+# You can delete any options you don't need - the action will use sensible defaults.
+# For detailed documentation of each option, see: ../docs/OPTIONS.md
+
+name: Deploy to Staging (Full Options)
+
+on:
+  push:
+    branches: [staging, develop]  # Multiple trigger branches
+  pull_request:
+    branches: [staging]
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      dry_run:
+        description: 'Perform dry run only'
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging  # GitHub environment for approvals/secrets
+    
+    steps:
+      # Checkout with full history for better change detection
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # Cache dependencies for faster builds
+      - uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      # Deploy to staging theme with all options
+      - id: deploy
+        uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+        with:
+          # Core Configuration (Required)
+          mode: staging
+          store: my-store.myshopify.com  # Can also use SHOPIFY_STORE_URL secret
+          
+          # Branch Configuration
+          branch_staging: staging  # Default branch for staging (default: staging)
+          branch_production: main,master  # Production branches (default: main,master)
+          
+          # Build Configuration
+          build_enabled: true  # Enable build step (default: true)
+          build_node_version: 20.x  # Node version (default: 20.x)
+          build_package_manager: npm  # npm, yarn, or pnpm (default: npm)
+          build_command: |  # Custom build command
+            npm ci --production=false
+            npm run lint
+            npm run test
+            npm run build:staging
+          build_cwd: .  # Working directory for build (default: .)
+          
+          # JSON Pull Configuration
+          json_pull_globs: |  # Files to pull from live theme (default shown)
+            templates/*.json
+            templates/customers/*.json
+            locales/*.json
+            config/settings_data.json
+            sections/*.json
+            snippets/*.json
+          json_sync_on_staging: true  # Sync JSON from live theme (default: true)
+          
+          # Push Configuration
+          push_extra_ignore: |  # Additional files to ignore during push
+            *.map
+            *.test.js
+            docs/**
+            tests/**
+            .github/**
+          push_nodelete: false  # Prevent file deletion on remote (default: false)
+          
+          # Backup Configuration (usually for production, but available)
+          backup_enabled: false  # Enable backups (default: true)
+          backup_retention: 3  # Number of backups to keep (default: 3)
+          backup_prefix: 'BACKUP_'  # Backup name prefix (default: BACKUP_)
+          backup_timezone: UTC  # Timezone for timestamps (default: UTC)
+          
+          # Deploy Configuration
+          deploy_ignore_json_on_prod: false  # Ignore JSON on production (default: true)
+          deploy_allow_live_push: false  # Allow live theme push (default: false)
+          
+          # Versioning Configuration (usually for production)
+          versioning_enabled: false  # Enable versioning (default: true)
+          versioning_strategy: patch  # patch, minor, or major (default: patch)
+          
+          # Optional Features
+          dry_run: ${{ inputs.dry_run || false }}  # Test without deploying
+        
+        env:
+          # Required Secrets
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+          SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Optional if using 'store' input
+          STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}
+          
+          # Optional Secrets
+          PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}  # For JSON sync source
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # For notifications (handled internally by action)
+          SYNC_JSON_ON_STAGING: true  # Override json_sync_on_staging
+      
+      # Use outputs from the deployment
+      - name: Display deployment results
+        run: |
+          echo "### 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Theme ID**: ${{ steps.deploy.outputs.theme_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Theme Name**: ${{ steps.deploy.outputs.theme_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Preview URL**: ${{ steps.deploy.outputs.preview_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Editor URL**: ${{ steps.deploy.outputs.editor_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.deploy.outputs.version }}" >> $GITHUB_STEP_SUMMARY
