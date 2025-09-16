@@ -40097,9 +40097,14 @@ async function packageTheme(themePath = '.', outputPath = null) {
     await exec.exec('shopify', args, options);
 
     // Extract ZIP file path from output
-    // The output format is usually: "Theme packaged to <filename>"
+    // The output can be in different formats:
+    // - "Theme packaged to <filename>"
+    // - "Your local theme was packaged in <filename>"
+    // - "Theme packaged in <filename>"
     const zipPathMatch =
-      output.match(/Theme packaged to:?\s+(.+\.zip)/i) || output.match(/(.+\.zip)/i);
+      output.match(/packaged (?:to|in):?\s+(.+\.zip)/i) ||
+      output.match(/was packaged in\s+(.+\.zip)/i) ||
+      output.match(/(.+\.zip)/i);
     const defaultZipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
 
     // If outputPath was specified, try to move the file to the desired location
@@ -40149,15 +40154,15 @@ async function openTheme(token, store, themeId) {
   };
 
   try {
-    await exec.exec(
-      'shopify',
-      ['theme', 'open', '--store', storeDomain, '--theme', themeId],
-      options
-    );
+    // Add ignoreReturnCode since 'theme open' tries to open browser which fails in CI/CD
+    await exec.exec('shopify', ['theme', 'open', '--store', storeDomain, '--theme', themeId], {
+      ...options,
+      ignoreReturnCode: true,
+    });
 
     // Parse URLs from output
-    const previewMatch = output.match(/Preview: (.+)/i);
-    const editorMatch = output.match(/Editor: (.+)/i);
+    const previewMatch = output.match(/Preview:?\s+(.+)/i) || output.match(/\[1\]\s+(.+)/i);
+    const editorMatch = output.match(/Editor:?\s+(.+)/i) || output.match(/\[2\]\s+(.+)/i);
 
     const urls = {
       preview: previewMatch
@@ -40173,8 +40178,8 @@ async function openTheme(token, store, themeId) {
 
     return urls;
   } catch (error) {
-    // Fallback to constructed URLs if open fails
-    core.debug(`Theme open failed, using fallback URLs: ${error.message}`);
+    // Fallback to constructed URLs if open fails (expected in CI/CD environments)
+    core.debug(`Theme open command failed (expected in CI/CD): ${error.message}`);
     return {
       preview: `https://${storeDomain}/?preview_theme_id=${themeId}`,
       editor: `https://${storeDomain}/admin/themes/${themeId}/editor`,
