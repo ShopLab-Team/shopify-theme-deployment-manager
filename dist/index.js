@@ -39133,13 +39133,59 @@ async function fetchFromRemote(remote = 'origin') {
  */
 async function createOrCheckoutBranch(branch, baseBranch = 'main') {
   try {
-    // Try to checkout existing branch
-    await exec.exec('git', ['checkout', branch]);
-    core.info(`Checked out existing branch: ${branch}`);
-  } catch {
-    // Create new branch from base
-    await exec.exec('git', ['checkout', '-b', branch, baseBranch]);
-    core.info(`Created new branch: ${branch} from ${baseBranch}`);
+    // First, check if the branch exists on remote
+    let remoteExists = false;
+    try {
+      await exec.exec('git', ['ls-remote', '--heads', 'origin', branch], {
+        silent: true,
+        ignoreReturnCode: true,
+        listeners: {
+          stdout: (data) => {
+            if (data.toString().trim()) {
+              remoteExists = true;
+            }
+          },
+        },
+      });
+    } catch {
+      // Remote check failed, assume doesn't exist
+      remoteExists = false;
+    }
+
+    if (remoteExists) {
+      // Fetch the remote branch
+      await exec.exec('git', ['fetch', 'origin', `${branch}:${branch}`]);
+      await exec.exec('git', ['checkout', branch]);
+      core.info(`Checked out existing remote branch: ${branch}`);
+      return;
+    }
+
+    // Check if branch exists locally
+    let localExists = false;
+    try {
+      await exec.exec('git', ['rev-parse', '--verify', branch], {
+        silent: true,
+        ignoreReturnCode: true,
+      });
+      localExists = true;
+    } catch {
+      localExists = false;
+    }
+
+    if (localExists) {
+      // Local branch exists, check it out
+      await exec.exec('git', ['checkout', branch]);
+      core.info(`Checked out existing local branch: ${branch}`);
+    } else {
+      // Create new branch from base
+      await exec.exec('git', ['checkout', '-b', branch, baseBranch]);
+      core.info(`Created new branch: ${branch} from ${baseBranch}`);
+    }
+  } catch (error) {
+    // If all else fails, force create new branch
+    core.warning(`Failed to checkout branch ${branch}: ${error.message}`);
+    await exec.exec('git', ['checkout', '-B', branch, baseBranch]);
+    core.info(`Force created branch: ${branch} from ${baseBranch}`);
   }
 }
 
@@ -40047,11 +40093,9 @@ async function getThemeInfo(token, store, themeId) {
 async function packageTheme(themePath = '.', outputPath = null) {
   let output = '';
 
+  // Note: --output flag is no longer supported in newer Shopify CLI versions
+  // The command now outputs to a default location
   const args = ['theme', 'package', '--path', themePath];
-
-  if (outputPath) {
-    args.push('--output', outputPath);
-  }
 
   const options = {
     listeners: {
@@ -40066,11 +40110,27 @@ async function packageTheme(themePath = '.', outputPath = null) {
     await exec.exec('shopify', args, options);
 
     // Extract ZIP file path from output
-    const zipPathMatch = output.match(/Theme packaged to: (.+\.zip)/i);
-    const zipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
+    // The output format is usually: "Theme packaged to <filename>"
+    const zipPathMatch =
+      output.match(/Theme packaged to:?\s+(.+\.zip)/i) || output.match(/(.+\.zip)/i);
+    const defaultZipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
 
-    core.info(`✅ Theme packaged to: ${zipPath}`);
-    return zipPath;
+    // If outputPath was specified, try to move the file to the desired location
+    if (outputPath && outputPath !== defaultZipPath) {
+      const fs = (__nccwpck_require__(9896).promises);
+      try {
+        await fs.rename(defaultZipPath, outputPath);
+        core.info(`✅ Theme packaged to: ${outputPath}`);
+        return outputPath;
+      } catch (moveError) {
+        core.warning(`Could not move package to ${outputPath}: ${moveError.message}`);
+        core.info(`✅ Theme packaged to: ${defaultZipPath}`);
+        return defaultZipPath;
+      }
+    }
+
+    core.info(`✅ Theme packaged to: ${defaultZipPath}`);
+    return defaultZipPath;
   } catch (error) {
     core.error(`Failed to package theme: ${error.message}`);
     throw error;
@@ -40099,10 +40159,8 @@ async function checkTheme(themePath = '.', options = {}) {
     args.push('--category', options.category);
   }
 
-  // Output format
-  if (options.json) {
-    args.push('--json');
-  }
+  // Note: --json flag is no longer supported in newer Shopify CLI versions
+  // We'll parse the text output instead
 
   const execOptions = {
     listeners: {

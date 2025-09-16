@@ -440,11 +440,9 @@ async function getThemeInfo(token, store, themeId) {
 async function packageTheme(themePath = '.', outputPath = null) {
   let output = '';
 
+  // Note: --output flag is no longer supported in newer Shopify CLI versions
+  // The command now outputs to a default location
   const args = ['theme', 'package', '--path', themePath];
-
-  if (outputPath) {
-    args.push('--output', outputPath);
-  }
 
   const options = {
     listeners: {
@@ -459,11 +457,27 @@ async function packageTheme(themePath = '.', outputPath = null) {
     await exec.exec('shopify', args, options);
 
     // Extract ZIP file path from output
-    const zipPathMatch = output.match(/Theme packaged to: (.+\.zip)/i);
-    const zipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
+    // The output format is usually: "Theme packaged to <filename>"
+    const zipPathMatch =
+      output.match(/Theme packaged to:?\s+(.+\.zip)/i) || output.match(/(.+\.zip)/i);
+    const defaultZipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
 
-    core.info(`✅ Theme packaged to: ${zipPath}`);
-    return zipPath;
+    // If outputPath was specified, try to move the file to the desired location
+    if (outputPath && outputPath !== defaultZipPath) {
+      const fs = require('fs').promises;
+      try {
+        await fs.rename(defaultZipPath, outputPath);
+        core.info(`✅ Theme packaged to: ${outputPath}`);
+        return outputPath;
+      } catch (moveError) {
+        core.warning(`Could not move package to ${outputPath}: ${moveError.message}`);
+        core.info(`✅ Theme packaged to: ${defaultZipPath}`);
+        return defaultZipPath;
+      }
+    }
+
+    core.info(`✅ Theme packaged to: ${defaultZipPath}`);
+    return defaultZipPath;
   } catch (error) {
     core.error(`Failed to package theme: ${error.message}`);
     throw error;
@@ -492,10 +506,8 @@ async function checkTheme(themePath = '.', options = {}) {
     args.push('--category', options.category);
   }
 
-  // Output format
-  if (options.json) {
-    args.push('--json');
-  }
+  // Note: --json flag is no longer supported in newer Shopify CLI versions
+  // We'll parse the text output instead
 
   const execOptions = {
     listeners: {

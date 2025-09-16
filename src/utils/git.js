@@ -172,13 +172,59 @@ async function fetchFromRemote(remote = 'origin') {
  */
 async function createOrCheckoutBranch(branch, baseBranch = 'main') {
   try {
-    // Try to checkout existing branch
-    await exec.exec('git', ['checkout', branch]);
-    core.info(`Checked out existing branch: ${branch}`);
-  } catch {
-    // Create new branch from base
-    await exec.exec('git', ['checkout', '-b', branch, baseBranch]);
-    core.info(`Created new branch: ${branch} from ${baseBranch}`);
+    // First, check if the branch exists on remote
+    let remoteExists = false;
+    try {
+      await exec.exec('git', ['ls-remote', '--heads', 'origin', branch], {
+        silent: true,
+        ignoreReturnCode: true,
+        listeners: {
+          stdout: (data) => {
+            if (data.toString().trim()) {
+              remoteExists = true;
+            }
+          },
+        },
+      });
+    } catch {
+      // Remote check failed, assume doesn't exist
+      remoteExists = false;
+    }
+
+    if (remoteExists) {
+      // Fetch the remote branch
+      await exec.exec('git', ['fetch', 'origin', `${branch}:${branch}`]);
+      await exec.exec('git', ['checkout', branch]);
+      core.info(`Checked out existing remote branch: ${branch}`);
+      return;
+    }
+
+    // Check if branch exists locally
+    let localExists = false;
+    try {
+      await exec.exec('git', ['rev-parse', '--verify', branch], {
+        silent: true,
+        ignoreReturnCode: true,
+      });
+      localExists = true;
+    } catch {
+      localExists = false;
+    }
+
+    if (localExists) {
+      // Local branch exists, check it out
+      await exec.exec('git', ['checkout', branch]);
+      core.info(`Checked out existing local branch: ${branch}`);
+    } else {
+      // Create new branch from base
+      await exec.exec('git', ['checkout', '-b', branch, baseBranch]);
+      core.info(`Created new branch: ${branch} from ${baseBranch}`);
+    }
+  } catch (error) {
+    // If all else fails, force create new branch
+    core.warning(`Failed to checkout branch ${branch}: ${error.message}`);
+    await exec.exec('git', ['checkout', '-B', branch, baseBranch]);
+    core.info(`Force created branch: ${branch} from ${baseBranch}`);
   }
 }
 
