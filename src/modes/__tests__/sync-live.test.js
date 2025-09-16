@@ -33,11 +33,11 @@ describe('sync-live', () => {
         store: 'test-store',
         dryRun: false,
         sync: {
-          mode: 'custom',
+          files: 'custom',
           onlyGlobs: ['templates/*.json', 'locales/*.json'],
           branch: 'remote_changes',
           commitMessage: 'chore(sync): import live JSON changes',
-          output: 'pr',
+          type: 'pr',
         },
         secrets: {
           themeToken: 'test-token',
@@ -126,7 +126,7 @@ describe('sync-live', () => {
     });
 
     it('should handle direct push mode', async () => {
-      config.sync.output = 'push';
+      config.sync.type = 'push';
 
       const result = await syncLive(config);
 
@@ -193,8 +193,8 @@ describe('sync-live', () => {
       );
     });
 
-    it('should sync all files when mode is all', async () => {
-      config.sync.mode = 'all';
+    it('should sync all files when files is all', async () => {
+      config.sync.files = 'all';
       config.sync.onlyGlobs = [];
       config.sync.commitMessage = 'chore(sync): import live theme changes';
 
@@ -216,8 +216,8 @@ describe('sync-live', () => {
       });
     });
 
-    it('should sync only JSON files when mode is json', async () => {
-      config.sync.mode = 'json';
+    it('should sync only JSON files when files is json', async () => {
+      config.sync.files = 'json';
       config.sync.onlyGlobs = [];
 
       const result = await syncLive(config);

@@ -26,16 +26,16 @@ async function syncLive(config) {
     if (config.dryRun) {
       core.startGroup('[DRY RUN] Live sync simulation');
       core.info(`Store: ${config.store}`);
-      core.info(`Sync mode: ${config.sync.mode}`);
-      if (config.sync.mode === 'custom' && config.sync.onlyGlobs.length > 0) {
+      core.info(`Sync files: ${config.sync.files}`);
+      if (config.sync.files === 'custom' && config.sync.onlyGlobs.length > 0) {
         core.info(`Sync globs: ${config.sync.onlyGlobs.join(', ')}`);
-      } else if (config.sync.mode === 'json') {
-        core.info('Sync mode: JSON files only');
+      } else if (config.sync.files === 'json') {
+        core.info('Syncing JSON files only');
       } else {
-        core.info('Sync mode: All files');
+        core.info('Syncing all theme files');
       }
       core.info(`Sync branch: ${config.sync.branch}`);
-      core.info(`Sync output: ${config.sync.output}`);
+      core.info(`Sync type: ${config.sync.type}`);
       core.info(`Commit message: ${config.sync.commitMessage}`);
       core.endGroup();
 
@@ -44,7 +44,7 @@ async function syncLive(config) {
         synced: true,
         filesSynced: ['[DRY RUN] Would sync specified files'],
         branch: config.sync.branch,
-        pullRequest: config.sync.output === 'pr' ? '[DRY RUN] Would create PR' : null,
+        pullRequest: config.sync.type === 'pr' ? '[DRY RUN] Would create PR' : null,
       };
     }
 
@@ -68,7 +68,7 @@ async function syncLive(config) {
     core.info(`Current branch: ${originalBranch}`);
 
     // Step 3: Create or checkout sync branch (only for PR mode)
-    if (config.sync.output === 'pr') {
+    if (config.sync.type === 'pr') {
       core.startGroup('🌿 Setting up sync branch');
       await createOrCheckoutBranch(config.sync.branch, originalBranch);
       core.endGroup();
@@ -109,9 +109,9 @@ async function syncLive(config) {
     // Step 4: Pull theme files
     core.startGroup('📥 Pulling files from live theme');
 
-    // Determine what files to sync based on mode
+    // Determine what files to sync based on files setting
     let syncGlobs = [];
-    if (config.sync.mode === 'json') {
+    if (config.sync.files === 'json') {
       // JSON mode: sync only JSON files
       syncGlobs = [
         'templates/*.json',
@@ -121,15 +121,15 @@ async function syncLive(config) {
         'locales/*.json',
         'config/settings_data.json',
       ];
-      core.info('Mode: JSON - Syncing only JSON files');
-    } else if (config.sync.mode === 'custom' && config.sync.onlyGlobs.length > 0) {
+      core.info('Files: JSON - Syncing only JSON files');
+    } else if (config.sync.files === 'custom' && config.sync.onlyGlobs.length > 0) {
       // Custom mode: use provided globs
       syncGlobs = config.sync.onlyGlobs;
-      core.info(`Mode: Custom - Using patterns: ${syncGlobs.join(', ')}`);
+      core.info(`Files: Custom - Using patterns: ${syncGlobs.join(', ')}`);
     } else {
       // All mode: sync everything (pass empty array to pull all files)
       syncGlobs = [];
-      core.info('Mode: All - Syncing all theme files');
+      core.info('Files: All - Syncing all theme files');
     }
 
     await pullThemeFiles(
@@ -151,7 +151,7 @@ async function syncLive(config) {
       core.endGroup();
 
       // Switch back to original branch if we changed
-      if (config.sync.output === 'pr' && originalBranch !== config.sync.branch) {
+      if (config.sync.type === 'pr' && originalBranch !== config.sync.branch) {
         await exec.exec('git', ['checkout', originalBranch]);
       }
 
@@ -176,8 +176,8 @@ async function syncLive(config) {
     core.info('Changes committed');
     core.endGroup();
 
-    // Step 7: Push or create PR based on output mode
-    if (config.sync.output === 'pr') {
+    // Step 7: Push or create PR based on sync type
+    if (config.sync.type === 'pr') {
       core.startGroup('🔀 Creating/updating pull request');
 
       // Push branch to remote_changes
@@ -205,7 +205,7 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
 - **Sync Time**: ${new Date().toISOString()}
 
 ### 🔧 Configuration
-- **Sync Mode**: ${config.sync.mode}
+- **Sync Files**: ${config.sync.files}
 - **Sync Patterns**: ${syncGlobs.length > 0 ? syncGlobs.join(', ') : 'All files'}
 - **Source Branch**: ${config.sync.branch}
 - **Target Branch**: ${targetBranch}
@@ -242,7 +242,7 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
       synced: true,
       filesSynced: changedFiles,
       filesCount: changedFiles.length,
-      branch: config.sync.output === 'pr' ? config.sync.branch : originalBranch,
+      branch: config.sync.type === 'pr' ? config.sync.branch : originalBranch,
       pullRequest: pullRequestUrl,
       syncTime,
       themeName: liveTheme.name,

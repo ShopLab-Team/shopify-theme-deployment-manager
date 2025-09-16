@@ -101,10 +101,10 @@ function getConfig() {
 
     // Sync configuration
     sync: {
-      mode: getInput('sync_mode') || 'all', // Options: 'all', 'json', 'custom'
+      files: getInput('sync_files') || 'all', // Options: 'all', 'json', 'custom'
       onlyGlobs: parseMultilineInput(
         getInput('sync_only_globs') ||
-          (getInput('sync_mode') === 'json'
+          (getInput('sync_files') === 'json'
             ? 'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
             : '')
       ),
@@ -112,10 +112,10 @@ function getConfig() {
       targetBranch: getInput('sync_target_branch') || 'staging',
       commitMessage:
         getInput('sync_commit_message') ||
-        (getInput('sync_mode') === 'json'
+        (getInput('sync_files') === 'json'
           ? 'chore(sync): import live JSON changes'
           : 'chore(sync): import live theme changes'),
-      output: getInput('sync_output') || 'pr',
+      type: getInput('sync_type') || 'pr',
     },
 
     // Secrets (from environment variables)

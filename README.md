@@ -129,12 +129,12 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `sync_mode` | Sync mode: `all` (sync all files), `json` (only JSON files), or `custom` (use `sync_only_globs`) | `all` |
-| `sync_only_globs` | File patterns for custom sync mode (only used when `sync_mode` is `custom`) | - |
+| `sync_files` | Files to sync: `all` (sync all theme files), `json` (only JSON files), or `custom` (use `sync_only_globs`) | `all` |
+| `sync_only_globs` | File patterns for custom sync mode (only used when `sync_files` is `custom`) | - |
 | `sync_branch` | Branch for sync commits | `remote_changes` |
-| `sync_target_branch` | Target branch for PR (when `sync_output: pr`) | `staging` |
+| `sync_target_branch` | Target branch for PR (when `sync_type: pr`) | `staging` |
 | `sync_commit_message` | Commit message for sync | Dynamic based on mode |
-| `sync_output` | Sync output method (`pr` or `push`) | `pr` |
+| `sync_type` | Sync type (`pr` for pull request or `push` for direct push) | `pr` |
 
 ### Secrets
 
@@ -269,12 +269,12 @@ jobs:
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: sync-live
-          sync_mode: all  # Options: 'all', 'json', or 'custom'
-          sync_output: pr  # Create PR for review
+          sync_files: all  # Options: 'all', 'json', or 'custom'
+          sync_type: pr  # Create PR for review
           sync_branch: remote_changes  # Branch to commit changes to
           sync_target_branch: staging  # Target branch for PR
           # For custom mode, specify patterns:
-          # sync_mode: custom
+          # sync_files: custom
           # sync_only_globs: |
           #   templates/*.json
           #   sections/*.liquid
@@ -378,7 +378,7 @@ shopify theme list --store=my-store.myshopify.com
   with:
     mode: sync-live
     store: my-store  # Optional if using SHOPIFY_STORE_URL secret
-    sync_mode: custom  # Use custom patterns
+    sync_files: custom  # Use custom patterns
     sync_only_globs: |
       config/settings_data.json
       templates/product.json

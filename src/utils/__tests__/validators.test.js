@@ -51,7 +51,7 @@ describe('validators', () => {
         mode: 'sync-live',
         store: 'test-store',
         build: { packageManager: 'npm' },
-        sync: { output: 'pr' },
+        sync: { type: 'pr' },
         secrets: {
           themeToken: 'token',
           githubToken: 'github-token',

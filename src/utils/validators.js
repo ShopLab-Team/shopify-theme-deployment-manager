@@ -42,11 +42,11 @@ function validateInputs(config) {
       if (!config.secrets.themeToken) {
         errors.push('SHOPIFY_CLI_THEME_TOKEN is required for sync-live mode');
       }
-      if (!config.secrets.githubToken && config.sync.output === 'pr') {
-        errors.push('GITHUB_TOKEN is required when sync output is set to PR');
+      if (!config.secrets.githubToken && config.sync.type === 'pr') {
+        errors.push('GITHUB_TOKEN is required when sync type is set to PR');
       }
-      if (!['pr', 'push'].includes(config.sync.output)) {
-        errors.push('Sync output must be pr or push');
+      if (!['pr', 'push'].includes(config.sync.type)) {
+        errors.push('Sync type must be pr or push');
       }
       break;
 

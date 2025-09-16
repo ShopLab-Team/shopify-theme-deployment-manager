@@ -124,13 +124,13 @@ inputs:
     default: 'patch'
   
   # Sync Configuration
-  sync_mode:
-    description: 'Sync mode: all (sync all files), json (only JSON files), custom (use sync_only_globs patterns)'
+  sync_files:
+    description: 'Files to sync: all (sync all theme files), json (only JSON files), custom (use sync_only_globs patterns)'
     required: false
     default: 'all'
   
   sync_only_globs:
-    description: 'Glob patterns for custom sync mode (newline-separated). Only used when sync_mode is "custom"'
+    description: 'Glob patterns for custom sync mode (newline-separated). Only used when sync_files is "custom"'
     required: false
     default: ''
   
@@ -149,8 +149,8 @@ inputs:
     required: false
     default: 'chore(sync): import live JSON changes'
   
-  sync_output:
-    description: 'Sync output mode: pr or push'
+  sync_type:
+    description: 'Sync type: pr (create pull request) or push (direct push to branch)'
     required: false
     default: 'pr'
   
@@ -218,9 +218,10 @@ runs:
         INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
         INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
         INPUT_VERSIONING_STRATEGY: ${{ inputs.versioning_strategy }}
+        INPUT_SYNC_FILES: ${{ inputs.sync_files }}
         INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
         INPUT_SYNC_BRANCH: ${{ inputs.sync_branch }}
         INPUT_SYNC_TARGET_BRANCH: ${{ inputs.sync_target_branch }}
         INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
-        INPUT_SYNC_OUTPUT: ${{ inputs.sync_output }}
+        INPUT_SYNC_TYPE: ${{ inputs.sync_type }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}

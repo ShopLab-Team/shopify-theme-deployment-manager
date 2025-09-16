@@ -40624,16 +40624,16 @@ async function syncLive(config) {
     if (config.dryRun) {
       core.startGroup('[DRY RUN] Live sync simulation');
       core.info(`Store: ${config.store}`);
-      core.info(`Sync mode: ${config.sync.mode}`);
-      if (config.sync.mode === 'custom' && config.sync.onlyGlobs.length > 0) {
+      core.info(`Sync files: ${config.sync.files}`);
+      if (config.sync.files === 'custom' && config.sync.onlyGlobs.length > 0) {
         core.info(`Sync globs: ${config.sync.onlyGlobs.join(', ')}`);
-      } else if (config.sync.mode === 'json') {
-        core.info('Sync mode: JSON files only');
+      } else if (config.sync.files === 'json') {
+        core.info('Syncing JSON files only');
       } else {
-        core.info('Sync mode: All files');
+        core.info('Syncing all theme files');
       }
       core.info(`Sync branch: ${config.sync.branch}`);
-      core.info(`Sync output: ${config.sync.output}`);
+      core.info(`Sync type: ${config.sync.type}`);
       core.info(`Commit message: ${config.sync.commitMessage}`);
       core.endGroup();
 
@@ -40642,7 +40642,7 @@ async function syncLive(config) {
         synced: true,
         filesSynced: ['[DRY RUN] Would sync specified files'],
         branch: config.sync.branch,
-        pullRequest: config.sync.output === 'pr' ? '[DRY RUN] Would create PR' : null,
+        pullRequest: config.sync.type === 'pr' ? '[DRY RUN] Would create PR' : null,
       };
     }
 
@@ -40666,40 +40666,50 @@ async function syncLive(config) {
     core.info(`Current branch: ${originalBranch}`);
 
     // Step 3: Create or checkout sync branch (only for PR mode)
-    if (config.sync.output === 'pr') {
+    if (config.sync.type === 'pr') {
       core.startGroup('🌿 Setting up sync branch');
       await createOrCheckoutBranch(config.sync.branch, originalBranch);
       core.endGroup();
     }
 
-    core.startGroup('📝 Creating .shopifyignore to exclude non-theme files');
+    core.startGroup('📝 Creating .shopifyignore to include only theme directories');
+    // Use allowlist approach: ignore everything, then explicitly allow theme directories
     const shopifyIgnoreContent = [
-      '.git',
-      '.github',
-      '.vscode',
-      '*.config.js',
-      'package.json',
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      'node_modules',
-      '.gitignore',
-      'README.md',
-      'LICENSE',
-      '.env',
-      'dist',
-      'coverage',
+      '# Ignore everything by default',
+      '*',
+      '.*',
+      '',
+      '# Allow only Shopify theme directories and files',
+      '!assets/',
+      '!assets/**',
+      '!config/',
+      '!config/**',
+      '!layout/',
+      '!layout/**',
+      '!locales/',
+      '!locales/**',
+      '!sections/',
+      '!sections/**',
+      '!snippets/',
+      '!snippets/**',
+      '!templates/',
+      '!templates/**',
+      '!templates/customers/',
+      '!templates/customers/**',
+      '!templates/metaobject/',
+      '!templates/metaobject/**',
+      '!translation.yml',
     ].join('\n');
     await fs.writeFile('.shopifyignore', shopifyIgnoreContent);
-    core.info('Created .shopifyignore file.');
+    core.info('Created .shopifyignore file with theme-only allowlist.');
     core.endGroup();
 
     // Step 4: Pull theme files
     core.startGroup('📥 Pulling files from live theme');
 
-    // Determine what files to sync based on mode
+    // Determine what files to sync based on files setting
     let syncGlobs = [];
-    if (config.sync.mode === 'json') {
+    if (config.sync.files === 'json') {
       // JSON mode: sync only JSON files
       syncGlobs = [
         'templates/*.json',
@@ -40709,15 +40719,15 @@ async function syncLive(config) {
         'locales/*.json',
         'config/settings_data.json',
       ];
-      core.info('Mode: JSON - Syncing only JSON files');
-    } else if (config.sync.mode === 'custom' && config.sync.onlyGlobs.length > 0) {
+      core.info('Files: JSON - Syncing only JSON files');
+    } else if (config.sync.files === 'custom' && config.sync.onlyGlobs.length > 0) {
       // Custom mode: use provided globs
       syncGlobs = config.sync.onlyGlobs;
-      core.info(`Mode: Custom - Using patterns: ${syncGlobs.join(', ')}`);
+      core.info(`Files: Custom - Using patterns: ${syncGlobs.join(', ')}`);
     } else {
       // All mode: sync everything (pass empty array to pull all files)
       syncGlobs = [];
-      core.info('Mode: All - Syncing all theme files');
+      core.info('Files: All - Syncing all theme files');
     }
 
     await pullThemeFiles(
@@ -40739,7 +40749,7 @@ async function syncLive(config) {
       core.endGroup();
 
       // Switch back to original branch if we changed
-      if (config.sync.output === 'pr' && originalBranch !== config.sync.branch) {
+      if (config.sync.type === 'pr' && originalBranch !== config.sync.branch) {
         await exec.exec('git', ['checkout', originalBranch]);
       }
 
@@ -40764,8 +40774,8 @@ async function syncLive(config) {
     core.info('Changes committed');
     core.endGroup();
 
-    // Step 7: Push or create PR based on output mode
-    if (config.sync.output === 'pr') {
+    // Step 7: Push or create PR based on sync type
+    if (config.sync.type === 'pr') {
       core.startGroup('🔀 Creating/updating pull request');
 
       // Push branch to remote_changes
@@ -40793,7 +40803,7 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
 - **Sync Time**: ${new Date().toISOString()}
 
 ### 🔧 Configuration
-- **Sync Mode**: ${config.sync.mode}
+- **Sync Files**: ${config.sync.files}
 - **Sync Patterns**: ${syncGlobs.length > 0 ? syncGlobs.join(', ') : 'All files'}
 - **Source Branch**: ${config.sync.branch}
 - **Target Branch**: ${targetBranch}
@@ -40830,7 +40840,7 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
       synced: true,
       filesSynced: changedFiles,
       filesCount: changedFiles.length,
-      branch: config.sync.output === 'pr' ? config.sync.branch : originalBranch,
+      branch: config.sync.type === 'pr' ? config.sync.branch : originalBranch,
       pullRequest: pullRequestUrl,
       syncTime,
       themeName: liveTheme.name,
@@ -41559,10 +41569,10 @@ function getConfig() {
 
     // Sync configuration
     sync: {
-      mode: getInput('sync_mode') || 'all', // Options: 'all', 'json', 'custom'
+      files: getInput('sync_files') || 'all', // Options: 'all', 'json', 'custom'
       onlyGlobs: parseMultilineInput(
         getInput('sync_only_globs') ||
-          (getInput('sync_mode') === 'json'
+          (getInput('sync_files') === 'json'
             ? 'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
             : '')
       ),
@@ -41570,10 +41580,10 @@ function getConfig() {
       targetBranch: getInput('sync_target_branch') || 'staging',
       commitMessage:
         getInput('sync_commit_message') ||
-        (getInput('sync_mode') === 'json'
+        (getInput('sync_files') === 'json'
           ? 'chore(sync): import live JSON changes'
           : 'chore(sync): import live theme changes'),
-      output: getInput('sync_output') || 'pr',
+      type: getInput('sync_type') || 'pr',
     },
 
     // Secrets (from environment variables)
@@ -43065,11 +43075,11 @@ function validateInputs(config) {
       if (!config.secrets.themeToken) {
         errors.push('SHOPIFY_CLI_THEME_TOKEN is required for sync-live mode');
       }
-      if (!config.secrets.githubToken && config.sync.output === 'pr') {
-        errors.push('GITHUB_TOKEN is required when sync output is set to PR');
+      if (!config.secrets.githubToken && config.sync.type === 'pr') {
+        errors.push('GITHUB_TOKEN is required when sync type is set to PR');
       }
-      if (!['pr', 'push'].includes(config.sync.output)) {
-        errors.push('Sync output must be pr or push');
+      if (!['pr', 'push'].includes(config.sync.type)) {
+        errors.push('Sync type must be pr or push');
       }
       break;
 

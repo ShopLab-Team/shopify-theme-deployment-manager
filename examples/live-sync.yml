@@ -30,7 +30,7 @@ jobs:
           store: ${{ secrets.SHOPIFY_STORE_URL }}
           
           # Create PR instead of direct push (recommended)
-          sync_output: pr
+          sync_type: pr
           
           # Optional: customize branch names (defaults shown)
           # sync_branch: remote_changes      # Branch to commit changes to

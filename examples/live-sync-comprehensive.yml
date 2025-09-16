@@ -24,8 +24,8 @@ on:
           - main
           - staging
           - development
-      sync_mode:
-        description: 'Sync output mode'
+      sync_type:
+        description: 'Sync type'
         required: false
         default: 'pr'
         type: choice
@@ -83,7 +83,7 @@ jobs:
           store: ${{ secrets.SHOPIFY_STORE_URL }}
           
           # Sync configuration
-          sync_output: ${{ inputs.sync_mode || 'pr' }}
+          sync_type: ${{ inputs.sync_type || 'pr' }}
           sync_branch: 'remote_changes'  # Always use the same branch for PR updates
           sync_target_branch: 'staging'   # Target branch for the PR
           sync_commit_message: 'feat(sync): import live theme changes'
@@ -256,7 +256,7 @@ jobs:
           
           echo "### 🔧 Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Target Branch**: ${{ inputs.target_branch || 'main' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Sync Mode**: ${{ inputs.sync_mode || 'pr' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sync Type**: ${{ inputs.sync_type || 'pr' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
           
       # Error handling and debugging
