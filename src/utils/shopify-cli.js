@@ -465,24 +465,85 @@ async function packageTheme(themePath = '.', outputPath = null) {
       output.match(/packaged (?:to|in):?\s+(.+\.zip)/i) ||
       output.match(/was packaged in\s+(.+\.zip)/i) ||
       output.match(/(.+\.zip)/i);
-    const defaultZipPath = zipPathMatch ? zipPathMatch[1].trim() : `theme.zip`;
+    const detectedZipPath = zipPathMatch ? zipPathMatch[1].trim() : null;
 
-    // If outputPath was specified, try to move the file to the desired location
-    if (outputPath && outputPath !== defaultZipPath) {
-      const fs = require('fs').promises;
+    // Try to find the actual created file
+    const fs = require('fs').promises;
+    let actualZipPath = detectedZipPath;
+
+    // If we detected a file, verify it exists
+    if (detectedZipPath) {
       try {
-        await fs.rename(defaultZipPath, outputPath);
-        core.info(`✅ Theme packaged to: ${outputPath}`);
-        return outputPath;
-      } catch (moveError) {
-        core.warning(`Could not move package to ${outputPath}: ${moveError.message}`);
-        core.info(`✅ Theme packaged to: ${defaultZipPath}`);
-        return defaultZipPath;
+        await fs.access(detectedZipPath);
+      } catch {
+        // File doesn't exist at detected path, look for any .zip file
+        core.debug(`Detected file ${detectedZipPath} not found, searching for .zip files...`);
+        const files = await fs.readdir('.');
+        const zipFiles = files.filter((f) => f.endsWith('.zip'));
+        if (zipFiles.length > 0) {
+          // Use the first zip file found (typically there should only be one)
+          actualZipPath = zipFiles[0];
+          core.debug(`Found zip file: ${actualZipPath}`);
+        } else {
+          actualZipPath = null;
+        }
       }
     }
 
-    core.info(`✅ Theme packaged to: ${defaultZipPath}`);
-    return defaultZipPath;
+    // If no file found, try common patterns
+    if (!actualZipPath) {
+      const commonPatterns = ['theme.zip', 'Horizon-*.zip'];
+      for (const pattern of commonPatterns) {
+        if (pattern.includes('*')) {
+          // Handle glob pattern
+          const files = await fs.readdir('.');
+          const regex = new RegExp(pattern.replace('*', '.*'));
+          const matches = files.filter((f) => regex.test(f));
+          if (matches.length > 0) {
+            actualZipPath = matches[0];
+            break;
+          }
+        } else {
+          // Direct file check
+          try {
+            await fs.access(pattern);
+            actualZipPath = pattern;
+            break;
+          } catch {
+            // File doesn't exist, continue
+          }
+        }
+      }
+    }
+
+    if (!actualZipPath) {
+      throw new Error('No theme package file found after packaging');
+    }
+
+    // If outputPath was specified and different, try to rename
+    if (outputPath && outputPath !== actualZipPath) {
+      try {
+        await fs.rename(actualZipPath, outputPath);
+        core.info(`✅ Theme packaged to: ${outputPath}`);
+        return outputPath;
+      } catch (moveError) {
+        // Try to copy instead of rename (in case of cross-device issue)
+        try {
+          const content = await fs.readFile(actualZipPath);
+          await fs.writeFile(outputPath, content);
+          await fs.unlink(actualZipPath);
+          core.info(`✅ Theme packaged to: ${outputPath}`);
+          return outputPath;
+        } catch (copyError) {
+          core.warning(`Could not move package to ${outputPath}: ${moveError.message}`);
+          core.info(`✅ Theme packaged to: ${actualZipPath}`);
+          return actualZipPath;
+        }
+      }
+    }
+
+    core.info(`✅ Theme packaged to: ${actualZipPath}`);
+    return actualZipPath;
   } catch (error) {
     core.error(`Failed to package theme: ${error.message}`);
     throw error;
@@ -513,38 +574,54 @@ async function openTheme(token, store, themeId) {
     },
   };
 
+  // In CI/CD environments, 'theme open' will try to open a browser which will fail
+  // We don't need this to succeed - we just want the URL output
   try {
-    // Add ignoreReturnCode since 'theme open' tries to open browser which fails in CI/CD
     await exec.exec('shopify', ['theme', 'open', '--store', storeDomain, '--theme', themeId], {
       ...options,
       ignoreReturnCode: true,
+      silent: true, // Suppress error output
+      listeners: {
+        stdout: (data) => {
+          output += data.toString();
+        },
+        stderr: (data) => {
+          // Silently capture stderr but don't display xdg-open errors
+          const stderr = data.toString();
+          if (!stderr.includes('xdg-open') && !stderr.includes('spawn')) {
+            core.debug(`Theme open stderr: ${stderr}`);
+          }
+        },
+      },
     });
-
-    // Parse URLs from output
-    const previewMatch = output.match(/Preview:?\s+(.+)/i) || output.match(/\[1\]\s+(.+)/i);
-    const editorMatch = output.match(/Editor:?\s+(.+)/i) || output.match(/\[2\]\s+(.+)/i);
-
-    const urls = {
-      preview: previewMatch
-        ? previewMatch[1].trim()
-        : `https://${storeDomain}/?preview_theme_id=${themeId}`,
-      editor: editorMatch
-        ? editorMatch[1].trim()
-        : `https://${storeDomain}/admin/themes/${themeId}/editor`,
-    };
-
-    core.info(`Theme URLs - Preview: ${urls.preview}`);
-    core.info(`Theme URLs - Editor: ${urls.editor}`);
-
-    return urls;
   } catch (error) {
-    // Fallback to constructed URLs if open fails (expected in CI/CD environments)
-    core.debug(`Theme open command failed (expected in CI/CD): ${error.message}`);
-    return {
-      preview: `https://${storeDomain}/?preview_theme_id=${themeId}`,
-      editor: `https://${storeDomain}/admin/themes/${themeId}/editor`,
-    };
+    // Expected in CI/CD - ignore browser opening errors
+    core.debug(`Theme open failed (expected in CI/CD): ${error.message}`);
   }
+
+  // Parse URLs from output
+  const previewMatch =
+    output.match(/Preview:?\s+(.+)/i) ||
+    output.match(/\[1\]\s+(.+)/i) ||
+    output.match(/https:\/\/[^\s]+\/?preview_theme_id=\d+/i);
+  const editorMatch =
+    output.match(/Editor:?\s+(.+)/i) ||
+    output.match(/\[2\]\s+(.+)/i) ||
+    output.match(/https:\/\/[^\s]+\/admin\/themes\/\d+/i);
+
+  const urls = {
+    preview: previewMatch
+      ? previewMatch[0].replace(/.*?(https:\/\/.*)/, '$1').trim()
+      : `https://${storeDomain}/?preview_theme_id=${themeId}`,
+    editor: editorMatch
+      ? editorMatch[0].replace(/.*?(https:\/\/.*)/, '$1').trim()
+      : `https://${storeDomain}/admin/themes/${themeId}/editor`,
+  };
+
+  core.info(`Theme URLs - Preview: ${urls.preview}`);
+  core.info(`Theme URLs - Editor: ${urls.editor}`);
+
+  return urls;
 }
 
 module.exports = {
