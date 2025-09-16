@@ -33,6 +33,7 @@ describe('sync-live', () => {
         store: 'test-store',
         dryRun: false,
         sync: {
+          mode: 'custom',
           onlyGlobs: ['templates/*.json', 'locales/*.json'],
           branch: 'remote_changes',
           commitMessage: 'chore(sync): import live JSON changes',
@@ -85,7 +86,7 @@ describe('sync-live', () => {
       expect(shopifyCli.pullThemeFiles).not.toHaveBeenCalled();
     });
 
-    it('should sync live theme and create PR', async () => {
+    it('should sync live theme with custom patterns and create PR', async () => {
       const result = await syncLive(config);
 
       expect(shopifyCli.getLiveTheme).toHaveBeenCalledWith('test-token', 'test-store');
@@ -192,6 +193,58 @@ describe('sync-live', () => {
       );
     });
 
+    it('should sync all files when mode is all', async () => {
+      config.sync.mode = 'all';
+      config.sync.onlyGlobs = [];
+      config.sync.commitMessage = 'chore(sync): import live theme changes';
+
+      const result = await syncLive(config);
+
+      expect(shopifyCli.getLiveTheme).toHaveBeenCalledWith('test-token', 'test-store');
+      expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456789',
+        [], // Empty array means sync all files
+        '.'
+      );
+
+      expect(result).toMatchObject({
+        mode: 'sync-live',
+        synced: true,
+        filesSynced: ['templates/product.json', 'locales/en.default.json'],
+      });
+    });
+
+    it('should sync only JSON files when mode is json', async () => {
+      config.sync.mode = 'json';
+      config.sync.onlyGlobs = [];
+
+      const result = await syncLive(config);
+
+      expect(shopifyCli.getLiveTheme).toHaveBeenCalledWith('test-token', 'test-store');
+      expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456789',
+        [
+          'templates/*.json',
+          'templates/customers/*.json',
+          'sections/*.json',
+          'snippets/*.json',
+          'locales/*.json',
+          'config/settings_data.json',
+        ],
+        '.'
+      );
+
+      expect(result).toMatchObject({
+        mode: 'sync-live',
+        synced: true,
+        filesSynced: ['templates/product.json', 'locales/en.default.json'],
+      });
+    });
+
     it('should handle sync errors gracefully', async () => {
       const error = new Error('Failed to pull theme files');
       shopifyCli.pullThemeFiles.mockRejectedValue(error);
@@ -212,20 +265,6 @@ describe('sync-live', () => {
       git.createPullRequest.mockRejectedValue(error);
 
       await expect(syncLive(config)).rejects.toThrow('Failed to create PR');
-    });
-
-    it('should handle empty sync globs', async () => {
-      config.sync.onlyGlobs = [];
-
-      await syncLive(config);
-
-      expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
-        'test-token',
-        'test-store',
-        '123456789',
-        [],
-        '.'
-      );
     });
   });
 });

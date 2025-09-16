@@ -26,7 +26,14 @@ async function syncLive(config) {
     if (config.dryRun) {
       core.startGroup('[DRY RUN] Live sync simulation');
       core.info(`Store: ${config.store}`);
-      core.info(`Sync globs: ${config.sync.onlyGlobs.join(', ')}`);
+      core.info(`Sync mode: ${config.sync.mode}`);
+      if (config.sync.mode === 'custom' && config.sync.onlyGlobs.length > 0) {
+        core.info(`Sync globs: ${config.sync.onlyGlobs.join(', ')}`);
+      } else if (config.sync.mode === 'json') {
+        core.info('Sync mode: JSON files only');
+      } else {
+        core.info('Sync mode: All files');
+      }
       core.info(`Sync branch: ${config.sync.branch}`);
       core.info(`Sync output: ${config.sync.output}`);
       core.info(`Commit message: ${config.sync.commitMessage}`);
@@ -91,11 +98,35 @@ async function syncLive(config) {
 
     // Step 4: Pull theme files
     core.startGroup('📥 Pulling files from live theme');
+
+    // Determine what files to sync based on mode
+    let syncGlobs = [];
+    if (config.sync.mode === 'json') {
+      // JSON mode: sync only JSON files
+      syncGlobs = [
+        'templates/*.json',
+        'templates/customers/*.json',
+        'sections/*.json',
+        'snippets/*.json',
+        'locales/*.json',
+        'config/settings_data.json',
+      ];
+      core.info('Mode: JSON - Syncing only JSON files');
+    } else if (config.sync.mode === 'custom' && config.sync.onlyGlobs.length > 0) {
+      // Custom mode: use provided globs
+      syncGlobs = config.sync.onlyGlobs;
+      core.info(`Mode: Custom - Using patterns: ${syncGlobs.join(', ')}`);
+    } else {
+      // All mode: sync everything (pass empty array to pull all files)
+      syncGlobs = [];
+      core.info('Mode: All - Syncing all theme files');
+    }
+
     await pullThemeFiles(
       config.secrets.themeToken,
       config.store,
       liveTheme.id.toString(),
-      config.sync.onlyGlobs,
+      syncGlobs,
       '.'
     );
     core.info('Files pulled from live theme');
@@ -164,7 +195,8 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
 - **Sync Time**: ${new Date().toISOString()}
 
 ### 🔧 Configuration
-- **Sync Patterns**: ${config.sync.onlyGlobs.join(', ')}
+- **Sync Mode**: ${config.sync.mode}
+- **Sync Patterns**: ${syncGlobs.length > 0 ? syncGlobs.join(', ') : 'All files'}
 - **Source Branch**: ${config.sync.branch}
 - **Target Branch**: ${targetBranch}
 

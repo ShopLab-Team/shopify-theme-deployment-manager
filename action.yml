@@ -124,13 +124,15 @@ inputs:
     default: 'patch'
   
   # Sync Configuration
-  sync_only_globs:
-    description: 'Glob patterns for sync mode (newline-separated)'
+  sync_mode:
+    description: 'Sync mode: all (sync all files), json (only JSON files), custom (use sync_only_globs patterns)'
     required: false
-    default: |
-      templates/*.json
-      locales/*.json
-      config/settings_data.json
+    default: 'all'
+  
+  sync_only_globs:
+    description: 'Glob patterns for custom sync mode (newline-separated). Only used when sync_mode is "custom"'
+    required: false
+    default: ''
   
   sync_branch:
     description: 'Branch name for sync commits'

@@ -129,10 +129,11 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `sync_only_globs` | Files to sync from live theme | `templates/*.json`<br>`templates/customers/*.json`<br>`sections/*.json`<br>`snippets/*.json`<br>`locales/*.json`<br>`config/settings_data.json` |
+| `sync_mode` | Sync mode: `all` (sync all files), `json` (only JSON files), or `custom` (use `sync_only_globs`) | `all` |
+| `sync_only_globs` | File patterns for custom sync mode (only used when `sync_mode` is `custom`) | - |
 | `sync_branch` | Branch for sync commits | `remote_changes` |
 | `sync_target_branch` | Target branch for PR (when `sync_output: pr`) | `staging` |
-| `sync_commit_message` | Commit message for sync | `chore(sync): import live JSON changes` |
+| `sync_commit_message` | Commit message for sync | Dynamic based on mode |
 | `sync_output` | Sync output method (`pr` or `push`) | `pr` |
 
 ### Secrets
@@ -268,9 +269,16 @@ jobs:
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: sync-live
+          sync_mode: all  # Options: 'all', 'json', or 'custom'
           sync_output: pr  # Create PR for review
           sync_branch: remote_changes  # Branch to commit changes to
           sync_target_branch: staging  # Target branch for PR
+          # For custom mode, specify patterns:
+          # sync_mode: custom
+          # sync_only_globs: |
+          #   templates/*.json
+          #   sections/*.liquid
+          #   assets/*.css
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
@@ -370,6 +378,7 @@ shopify theme list --store=my-store.myshopify.com
   with:
     mode: sync-live
     store: my-store  # Optional if using SHOPIFY_STORE_URL secret
+    sync_mode: custom  # Use custom patterns
     sync_only_globs: |
       config/settings_data.json
       templates/product.json

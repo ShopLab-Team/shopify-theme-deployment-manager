@@ -8,7 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- **Flexible sync modes for sync-live feature**:
+  - `all` mode: Sync all theme files (default)
+  - `json` mode: Sync only JSON files  
+  - `custom` mode: Sync specific files using custom patterns
+- New `sync_mode` configuration option to control synchronization behavior
+- Enhanced test coverage for different sync modes
+
+### Changed
+- Default sync behavior changed from JSON-only to all files
+- Improved sync-live commit messages based on sync mode
 
 ## [1.1.0] - 2025-09-15
 
