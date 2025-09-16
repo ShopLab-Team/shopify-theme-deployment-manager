@@ -1,6 +1,5 @@
 const core = require('@actions/core');
 const exec = require('@actions/exec');
-const semver = require('semver');
 const { normalizeStore } = require('./validators');
 
 /**
@@ -9,7 +8,7 @@ const { normalizeStore } = require('./validators');
  * @returns {Object} Version info
  */
 function extractVersion(themeName) {
-  // Match version pattern [x.y.z] at the end of the name
+  // Match version pattern [x.yy.zz] or [x.y.z] at the end of the name
   const versionPattern = /\[(\d+\.\d+\.\d+)\]$/;
   const match = themeName.match(versionPattern);
 
@@ -29,31 +28,70 @@ function extractVersion(themeName) {
 }
 
 /**
- * Bump version according to strategy
+ * Parse version string to numbers
+ * @param {string} version - Version string (e.g., "1.02.03" or "1.2.3")
+ * @returns {Object} Parsed version components
+ */
+function parseVersion(version) {
+  if (!version) {
+    return { major: 0, minor: 0, patch: 0 };
+  }
+
+  const parts = version.split('.').map((p) => parseInt(p, 10) || 0);
+  return {
+    major: parts[0] || 0,
+    minor: parts[1] || 0,
+    patch: parts[2] || 0,
+  };
+}
+
+/**
+ * Format version components to string with zero padding
+ * @param {number} major - Major version
+ * @param {number} minor - Minor version (0-99)
+ * @param {number} patch - Patch version (0-99)
+ * @returns {string} Formatted version string
+ */
+function formatVersion(major, minor, patch) {
+  // Pad minor and patch to 2 digits for consistency
+  const minorStr = String(minor).padStart(2, '0');
+  const patchStr = String(patch).padStart(2, '0');
+  return `${major}.${minorStr}.${patchStr}`;
+}
+
+/**
+ * Auto-increment version with rollover at 100
  * @param {string} currentVersion - Current version string
- * @param {string} strategy - Bump strategy (patch, minor, major)
  * @returns {string} New version
  */
-function bumpVersion(currentVersion, strategy = 'patch') {
+function bumpVersion(currentVersion) {
   if (!currentVersion) {
-    return '0.0.1';
+    return '0.00.01';
   }
 
-  // Ensure version is valid semver
-  const cleanVersion = semver.clean(currentVersion);
-  if (!cleanVersion) {
-    core.warning(`Invalid version format: ${currentVersion}, resetting to 0.0.1`);
-    return '0.0.1';
+  const { major, minor, patch } = parseVersion(currentVersion);
+
+  let newMajor = major;
+  let newMinor = minor;
+  let newPatch = patch + 1;
+
+  // Rollover logic: 100 patches → 1 minor, 100 minors → 1 major
+  if (newPatch >= 100) {
+    newPatch = 0;
+    newMinor++;
+
+    if (newMinor >= 100) {
+      newMinor = 0;
+      newMajor++;
+
+      if (newMajor >= 100) {
+        core.warning('Version has reached maximum (99.99.99), resetting to 0.00.01');
+        return '0.00.01';
+      }
+    }
   }
 
-  // Bump according to strategy
-  const newVersion = semver.inc(cleanVersion, strategy);
-  if (!newVersion) {
-    core.warning(`Failed to bump version ${cleanVersion} with strategy ${strategy}`);
-    return '0.0.1';
-  }
-
-  return newVersion;
+  return formatVersion(newMajor, newMinor, newPatch);
 }
 
 /**
@@ -61,10 +99,9 @@ function bumpVersion(currentVersion, strategy = 'patch') {
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
- * @param {string} strategy - Version bump strategy
  * @returns {Promise<Object>} Version result
  */
-async function renameThemeWithVersion(token, store, themeId, strategy = 'patch') {
+async function renameThemeWithVersion(token, store, themeId) {
   try {
     // Get current theme name
     const { getThemeById } = require('./shopify-cli');
@@ -80,9 +117,9 @@ async function renameThemeWithVersion(token, store, themeId, strategy = 'patch')
     // Extract current version
     const versionInfo = extractVersion(currentName);
 
-    // Bump version
+    // Auto-increment version
     const oldVersion = versionInfo.version;
-    const newVersion = bumpVersion(oldVersion, strategy);
+    const newVersion = bumpVersion(oldVersion);
 
     // Build new name
     const newName = `${versionInfo.baseName} [${newVersion}]`;
@@ -160,26 +197,27 @@ function compareVersions(version1, version2) {
     return 0;
   }
 
-  const v1 = semver.clean(version1);
-  const v2 = semver.clean(version2);
+  const v1 = parseVersion(version1);
+  const v2 = parseVersion(version2);
 
-  if (!v1 || !v2) {
-    return 0;
-  }
+  // Compare major.minor.patch as a single number
+  const num1 = v1.major * 10000 + v1.minor * 100 + v1.patch;
+  const num2 = v2.major * 10000 + v2.minor * 100 + v2.patch;
 
-  return semver.compare(v1, v2);
+  if (num1 < num2) return -1;
+  if (num1 > num2) return 1;
+  return 0;
 }
 
 /**
  * Get next version for a theme
  * @param {string} themeName - Theme name
- * @param {string} strategy - Version bump strategy
  * @returns {Object} Version info
  */
-function getNextVersion(themeName, strategy = 'patch') {
+function getNextVersion(themeName) {
   const versionInfo = extractVersion(themeName);
-  const currentVersion = versionInfo.version || '0.0.0';
-  const nextVersion = bumpVersion(currentVersion, strategy);
+  const currentVersion = versionInfo.version || '0.00.00';
+  const nextVersion = bumpVersion(currentVersion);
 
   return {
     current: currentVersion,
@@ -189,23 +227,6 @@ function getNextVersion(themeName, strategy = 'patch') {
   };
 }
 
-/**
- * Parse version strategy from string
- * @param {string} strategy - Strategy string
- * @returns {string} Valid strategy
- */
-function parseVersionStrategy(strategy) {
-  const validStrategies = ['patch', 'minor', 'major'];
-  const normalized = strategy?.toLowerCase();
-
-  if (validStrategies.includes(normalized)) {
-    return normalized;
-  }
-
-  core.warning(`Invalid version strategy: ${strategy}, defaulting to patch`);
-  return 'patch';
-}
-
 module.exports = {
   extractVersion,
   bumpVersion,
@@ -213,5 +234,6 @@ module.exports = {
   renameTheme,
   compareVersions,
   getNextVersion,
-  parseVersionStrategy,
+  parseVersion,
+  formatVersion,
 };

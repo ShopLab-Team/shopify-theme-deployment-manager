@@ -6,7 +6,8 @@ const {
   renameThemeWithVersion,
   compareVersions,
   getNextVersion,
-  parseVersionStrategy,
+  parseVersion,
+  formatVersion,
 } = require('../versioning');
 
 // Mock dependencies
@@ -65,30 +66,37 @@ describe('versioning', () => {
   });
 
   describe('bumpVersion', () => {
-    it('should bump patch version', () => {
-      expect(bumpVersion('1.2.3', 'patch')).toBe('1.2.4');
+    it('should auto-increment patch version', () => {
+      expect(bumpVersion('1.02.03')).toBe('1.02.04');
+      expect(bumpVersion('0.00.09')).toBe('0.00.10');
+      expect(bumpVersion('0.00.98')).toBe('0.00.99');
     });
 
-    it('should bump minor version', () => {
-      expect(bumpVersion('1.2.3', 'minor')).toBe('1.3.0');
+    it('should rollover patch to minor at 100', () => {
+      expect(bumpVersion('0.00.99')).toBe('0.01.00');
+      expect(bumpVersion('1.05.99')).toBe('1.06.00');
     });
 
-    it('should bump major version', () => {
-      expect(bumpVersion('1.2.3', 'major')).toBe('2.0.0');
+    it('should rollover minor to major at 100', () => {
+      expect(bumpVersion('0.99.99')).toBe('1.00.00');
+      expect(bumpVersion('1.99.99')).toBe('2.00.00');
     });
 
-    it('should return 0.0.1 for null version', () => {
-      expect(bumpVersion(null, 'patch')).toBe('0.0.1');
-      expect(bumpVersion('', 'patch')).toBe('0.0.1');
+    it('should handle edge case at maximum', () => {
+      expect(bumpVersion('99.99.99')).toBe('0.00.01');
+      expect(core.warning).toHaveBeenCalledWith(
+        'Version has reached maximum (99.99.99), resetting to 0.00.01'
+      );
     });
 
-    it('should handle invalid version format', () => {
-      expect(bumpVersion('invalid', 'patch')).toBe('0.0.1');
-      expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Invalid version format'));
+    it('should return 0.00.01 for null version', () => {
+      expect(bumpVersion(null)).toBe('0.00.01');
+      expect(bumpVersion('')).toBe('0.00.01');
     });
 
-    it('should handle pre-release versions', () => {
-      expect(bumpVersion('1.2.3-beta.1', 'patch')).toBe('1.2.3');
+    it('should handle unpadded versions', () => {
+      expect(bumpVersion('1.2.3')).toBe('1.02.04');
+      expect(bumpVersion('0.0.9')).toBe('0.00.10');
     });
   });
 
@@ -102,19 +110,19 @@ describe('versioning', () => {
       getThemeById.mockResolvedValue(mockTheme);
       exec.exec.mockResolvedValue(0);
 
-      const result = await renameThemeWithVersion('test-token', 'test-store', '123456', 'minor');
+      const result = await renameThemeWithVersion('test-token', 'test-store', '123456');
 
       expect(result).toEqual({
         oldVersion: '1.0.0',
-        version: '1.1.0',
+        version: '1.00.01',
         oldName: 'PRODUCTION [1.0.0]',
-        name: 'PRODUCTION [1.1.0]',
+        name: 'PRODUCTION [1.00.01]',
         baseName: 'PRODUCTION',
       });
 
       expect(exec.exec).toHaveBeenCalledWith(
         'shopify',
-        expect.arrayContaining(['theme', 'rename', '--name', 'PRODUCTION [1.1.0]']),
+        expect.arrayContaining(['theme', 'rename', '--name', 'PRODUCTION [1.00.01]']),
         expect.any(Object)
       );
     });
@@ -128,13 +136,13 @@ describe('versioning', () => {
       getThemeById.mockResolvedValue(mockTheme);
       exec.exec.mockResolvedValue(0);
 
-      const result = await renameThemeWithVersion('test-token', 'test-store', '123456', 'patch');
+      const result = await renameThemeWithVersion('test-token', 'test-store', '123456');
 
       expect(result).toEqual({
         oldVersion: null,
-        version: '0.0.1',
+        version: '0.00.01',
         oldName: 'PRODUCTION',
-        name: 'PRODUCTION [0.0.1]',
+        name: 'PRODUCTION [0.00.01]',
         baseName: 'PRODUCTION',
       });
     });
@@ -158,50 +166,57 @@ describe('versioning', () => {
     });
 
     it('should handle invalid versions', () => {
-      expect(compareVersions('invalid', '1.0.0')).toBe(0);
-      expect(compareVersions('1.0.0', 'invalid')).toBe(0);
-      expect(compareVersions(null, '1.0.0')).toBe(0);
+      expect(compareVersions('invalid', '1.0.0')).toBe(-1); // 'invalid' becomes 0.0.0, which is less than 1.0.0
+      expect(compareVersions('1.0.0', 'invalid')).toBe(1); // 1.0.0 is greater than 0.0.0
+      expect(compareVersions(null, '1.0.0')).toBe(0); // null returns 0
     });
   });
 
   describe('getNextVersion', () => {
     it('should get next version for themed name', () => {
-      const result = getNextVersion('PRODUCTION [1.2.3]', 'minor');
+      const result = getNextVersion('PRODUCTION [1.02.03]');
       expect(result).toEqual({
-        current: '1.2.3',
-        next: '1.3.0',
+        current: '1.02.03',
+        next: '1.02.04',
         baseName: 'PRODUCTION',
-        newName: 'PRODUCTION [1.3.0]',
+        newName: 'PRODUCTION [1.02.04]',
       });
     });
 
     it('should handle name without version', () => {
-      const result = getNextVersion('PRODUCTION', 'patch');
+      const result = getNextVersion('PRODUCTION');
       expect(result).toEqual({
-        current: '0.0.0',
-        next: '0.0.1',
+        current: '0.00.00',
+        next: '0.00.01',
         baseName: 'PRODUCTION',
-        newName: 'PRODUCTION [0.0.1]',
+        newName: 'PRODUCTION [0.00.01]',
       });
     });
   });
 
-  describe('parseVersionStrategy', () => {
-    it('should parse valid strategies', () => {
-      expect(parseVersionStrategy('patch')).toBe('patch');
-      expect(parseVersionStrategy('minor')).toBe('minor');
-      expect(parseVersionStrategy('major')).toBe('major');
-      expect(parseVersionStrategy('PATCH')).toBe('patch');
-      expect(parseVersionStrategy('Minor')).toBe('minor');
+  describe('parseVersion', () => {
+    it('should parse version string correctly', () => {
+      expect(parseVersion('1.02.03')).toEqual({ major: 1, minor: 2, patch: 3 });
+      expect(parseVersion('10.99.50')).toEqual({ major: 10, minor: 99, patch: 50 });
+      expect(parseVersion('0.0.0')).toEqual({ major: 0, minor: 0, patch: 0 });
     });
 
-    it('should default to patch for invalid strategies', () => {
-      expect(parseVersionStrategy('invalid')).toBe('patch');
-      expect(parseVersionStrategy(null)).toBe('patch');
-      expect(parseVersionStrategy('')).toBe('patch');
-      expect(core.warning).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid version strategy')
-      );
+    it('should handle null or empty versions', () => {
+      expect(parseVersion(null)).toEqual({ major: 0, minor: 0, patch: 0 });
+      expect(parseVersion('')).toEqual({ major: 0, minor: 0, patch: 0 });
+    });
+
+    it('should handle malformed versions', () => {
+      expect(parseVersion('1.2')).toEqual({ major: 1, minor: 2, patch: 0 });
+      expect(parseVersion('1')).toEqual({ major: 1, minor: 0, patch: 0 });
+    });
+  });
+
+  describe('formatVersion', () => {
+    it('should format version with zero padding', () => {
+      expect(formatVersion(1, 2, 3)).toBe('1.02.03');
+      expect(formatVersion(0, 0, 1)).toBe('0.00.01');
+      expect(formatVersion(10, 99, 88)).toBe('10.99.88');
     });
   });
 });

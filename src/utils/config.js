@@ -99,7 +99,6 @@ function getConfig() {
     // Versioning configuration
     versioning: {
       enabled: parseBoolean(getInput('versioning_enabled')),
-      strategy: getInput('versioning_strategy') || 'patch',
     },
 
     // Sync configuration

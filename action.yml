@@ -129,14 +129,9 @@ inputs:
   
   # Versioning Configuration
   versioning_enabled:
-    description: 'Enable theme version tagging'
+    description: 'Enable automatic version incrementing (format: X.YY.ZZ with auto-rollover)'
     required: false
     default: 'true'
-  
-  versioning_strategy:
-    description: 'Version bump strategy: patch, minor, or major'
-    required: false
-    default: 'patch'
   
   # Sync Configuration
   sync_files:
@@ -257,7 +252,6 @@ runs:
         INPUT_DEPLOY_IGNORE_JSON_ON_PROD: ${{ inputs.deploy_ignore_json_on_prod }}
         INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
         INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
-        INPUT_VERSIONING_STRATEGY: ${{ inputs.versioning_strategy }}
         INPUT_SYNC_FILES: ${{ inputs.sync_files }}
         INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
         INPUT_SYNC_BRANCH: ${{ inputs.sync_branch }}

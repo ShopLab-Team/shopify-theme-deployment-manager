@@ -33,9 +33,6 @@ function validateInputs(config) {
       if (config.backup.retention < 0) {
         errors.push('Backup retention must be a positive number');
       }
-      if (!['patch', 'minor', 'major'].includes(config.versioning.strategy)) {
-        errors.push('Versioning strategy must be patch, minor, or major');
-      }
       break;
 
     case 'sync-live':

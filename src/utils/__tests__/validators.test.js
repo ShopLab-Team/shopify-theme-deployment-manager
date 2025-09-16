@@ -36,7 +36,7 @@ describe('validators', () => {
         store: 'test-store',
         build: { packageManager: 'npm' },
         backup: { retention: 3 },
-        versioning: { strategy: 'patch' },
+        versioning: { enabled: true },
         secrets: {
           themeToken: 'token',
         },

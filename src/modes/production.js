@@ -31,7 +31,6 @@ async function productionDeploy(config) {
       core.info(`  Backup enabled: ${config.backup.enabled}`);
       core.info(`  Backup retention: ${config.backup.retention}`);
       core.info(`  Versioning enabled: ${config.versioning.enabled}`);
-      core.info(`  Versioning strategy: ${config.versioning.strategy}`);
       core.info(`  Ignore JSON on prod: ${config.deploy.ignoreJsonOnProd}`);
 
       return {
@@ -181,8 +180,7 @@ async function productionDeploy(config) {
       const versionResult = await renameThemeWithVersion(
         config.secrets.themeToken,
         config.store,
-        productionTheme.id.toString(),
-        config.versioning.strategy
+        productionTheme.id.toString()
       );
 
       newVersion = versionResult.version;
