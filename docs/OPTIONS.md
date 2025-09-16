@@ -175,10 +175,20 @@ This document provides a comprehensive reference for all configuration options a
 - **Default**: `true`
 - **Options**: `true` or `false`
 - **Use Case**: Track deployment history with auto-incrementing version numbers
-- **Format**: `X.YY.ZZ` (e.g., 1.02.03)
-- **Rollover**: Automatically rolls over at 100:
-  - 100 patches → 1 minor (0.00.99 → 0.01.00)
-  - 100 minors → 1 major (0.99.99 → 1.00.00)
+- **Example**: Set to `false` to disable automatic versioning
+
+### `versioning_format`
+- **Description**: Version number format to use
+- **Default**: `X.XX.XX`
+- **Options**: 
+  - `X.X.X` - Single digits (e.g., `1.2.3`, `10.20.30`)
+  - `X.XX.XX` - Zero-padded double digits (e.g., `1.02.03`, `10.20.30`)
+- **Rollover**: Both formats support automatic rollover at 100:
+  - 100 patches → 1 minor version
+  - 100 minors → 1 major version
+- **Examples**:
+  - `X.X.X`: `[1.2.3]` → `[1.2.4]` → ... → `[1.2.99]` → `[1.3.0]`
+  - `X.XX.XX`: `[1.02.03]` → `[1.02.04]` → ... → `[1.02.99]` → `[1.03.00]`
   - Maximum capacity: 1 million deployments before reset
 
 ## Sync Configuration

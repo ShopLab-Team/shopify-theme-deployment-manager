@@ -85,7 +85,7 @@ describe('versioning', () => {
     it('should handle edge case at maximum', () => {
       expect(bumpVersion('99.99.99')).toBe('0.00.01');
       expect(core.warning).toHaveBeenCalledWith(
-        'Version has reached maximum (99.99.99), resetting to 0.00.01'
+        'Version has reached maximum (99.99.99), resetting to 0.0.1'
       );
     });
 
@@ -97,6 +97,27 @@ describe('versioning', () => {
     it('should handle unpadded versions', () => {
       expect(bumpVersion('1.2.3')).toBe('1.02.04');
       expect(bumpVersion('0.0.9')).toBe('0.00.10');
+    });
+
+    it('should support X.X.X format without padding', () => {
+      expect(bumpVersion('1.2.3', 'X.X.X')).toBe('1.2.4');
+      expect(bumpVersion('0.0.9', 'X.X.X')).toBe('0.0.10');
+      expect(bumpVersion('0.0.99', 'X.X.X')).toBe('0.1.0');
+      expect(bumpVersion('0.99.99', 'X.X.X')).toBe('1.0.0');
+    });
+
+    it('should support X.XX.XX format with padding', () => {
+      expect(bumpVersion('1.2.3', 'X.XX.XX')).toBe('1.02.04');
+      expect(bumpVersion('0.0.9', 'X.XX.XX')).toBe('0.00.10');
+      expect(bumpVersion('0.0.99', 'X.XX.XX')).toBe('0.01.00');
+      expect(bumpVersion('0.99.99', 'X.XX.XX')).toBe('1.00.00');
+    });
+
+    it('should return correct initial version based on format', () => {
+      expect(bumpVersion(null, 'X.X.X')).toBe('0.0.1');
+      expect(bumpVersion(null, 'X.XX.XX')).toBe('0.00.01');
+      expect(bumpVersion('', 'X.X.X')).toBe('0.0.1');
+      expect(bumpVersion('', 'X.XX.XX')).toBe('0.00.01');
     });
   });
 
@@ -213,10 +234,19 @@ describe('versioning', () => {
   });
 
   describe('formatVersion', () => {
-    it('should format version with zero padding', () => {
+    it('should format version with zero padding for X.XX.XX format', () => {
       expect(formatVersion(1, 2, 3)).toBe('1.02.03');
       expect(formatVersion(0, 0, 1)).toBe('0.00.01');
       expect(formatVersion(10, 99, 88)).toBe('10.99.88');
+      expect(formatVersion(1, 2, 3, 'X.XX.XX')).toBe('1.02.03');
+    });
+
+    it('should format version without padding for X.X.X format', () => {
+      expect(formatVersion(1, 2, 3, 'X.X.X')).toBe('1.2.3');
+      expect(formatVersion(0, 0, 0, 'X.X.X')).toBe('0.0.0');
+      expect(formatVersion(99, 99, 99, 'X.X.X')).toBe('99.99.99');
+      expect(formatVersion(1, 0, 10, 'X.X.X')).toBe('1.0.10');
+      expect(formatVersion(10, 20, 30, 'X.X.X')).toBe('10.20.30');
     });
   });
 });

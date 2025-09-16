@@ -174,29 +174,37 @@ async function createOrCheckoutBranch(branch, baseBranch = 'main') {
   try {
     // First, check if the branch exists on remote
     let remoteExists = false;
+    let output = '';
     try {
       await exec.exec('git', ['ls-remote', '--heads', 'origin', branch], {
         silent: true,
         ignoreReturnCode: true,
         listeners: {
           stdout: (data) => {
-            if (data.toString().trim()) {
-              remoteExists = true;
-            }
+            output += data.toString();
           },
         },
       });
+      // Check if the output contains the branch name
+      if (output.trim() && output.includes(branch)) {
+        remoteExists = true;
+      }
     } catch {
       // Remote check failed, assume doesn't exist
       remoteExists = false;
     }
 
     if (remoteExists) {
-      // Fetch the remote branch
-      await exec.exec('git', ['fetch', 'origin', `${branch}:${branch}`]);
-      await exec.exec('git', ['checkout', branch]);
-      core.info(`Checked out existing remote branch: ${branch}`);
-      return;
+      // Fetch and checkout the remote branch
+      try {
+        await exec.exec('git', ['fetch', 'origin', branch]);
+        await exec.exec('git', ['checkout', '-B', branch, `origin/${branch}`]);
+        core.info(`Checked out existing remote branch: ${branch}`);
+        return;
+      } catch (error) {
+        core.warning(`Failed to fetch remote branch ${branch}, will create new: ${error.message}`);
+        // Continue to create new branch
+      }
     }
 
     // Check if branch exists locally

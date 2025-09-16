@@ -180,7 +180,8 @@ async function productionDeploy(config) {
       const versionResult = await renameThemeWithVersion(
         config.secrets.themeToken,
         config.store,
-        productionTheme.id.toString()
+        productionTheme.id.toString(),
+        config.versioning.format
       );
 
       newVersion = versionResult.version;

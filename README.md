@@ -8,7 +8,7 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 - **🎭 Multi-Environment Deployment**: Separate staging and production workflows
 - **🔄 Live Theme Sync**: Pull live theme changes back to your repository with PR creation
 - **💾 Automatic Backups**: Create timestamped backups with retention policies
-- **🏷️ Version Management**: Automatic version incrementing (X.YY.ZZ format with auto-rollover)
+- **🏷️ Version Management**: Automatic version incrementing with customizable formats (X.X.X or X.XX.XX)
 - **📦 Build Integration**: Support for npm, yarn, and pnpm build steps
 - **🎁 Release Packages**: Automatic theme packaging for GitHub releases
 - **🔔 Slack Notifications**: Rich notifications for deployment events

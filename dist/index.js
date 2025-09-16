@@ -37659,7 +37659,8 @@ async function productionDeploy(config) {
       const versionResult = await renameThemeWithVersion(
         config.secrets.themeToken,
         config.store,
-        productionTheme.id.toString()
+        productionTheme.id.toString(),
+        config.versioning.format
       );
 
       newVersion = versionResult.version;
@@ -38869,6 +38870,7 @@ function getConfig() {
     // Versioning configuration
     versioning: {
       enabled: parseBoolean(getInput('versioning_enabled')),
+      format: getInput('versioning_format') || 'X.XX.XX',
     },
 
     // Sync configuration
@@ -39112,29 +39114,37 @@ async function createOrCheckoutBranch(branch, baseBranch = 'main') {
   try {
     // First, check if the branch exists on remote
     let remoteExists = false;
+    let output = '';
     try {
       await exec.exec('git', ['ls-remote', '--heads', 'origin', branch], {
         silent: true,
         ignoreReturnCode: true,
         listeners: {
           stdout: (data) => {
-            if (data.toString().trim()) {
-              remoteExists = true;
-            }
+            output += data.toString();
           },
         },
       });
+      // Check if the output contains the branch name
+      if (output.trim() && output.includes(branch)) {
+        remoteExists = true;
+      }
     } catch {
       // Remote check failed, assume doesn't exist
       remoteExists = false;
     }
 
     if (remoteExists) {
-      // Fetch the remote branch
-      await exec.exec('git', ['fetch', 'origin', `${branch}:${branch}`]);
-      await exec.exec('git', ['checkout', branch]);
-      core.info(`Checked out existing remote branch: ${branch}`);
-      return;
+      // Fetch and checkout the remote branch
+      try {
+        await exec.exec('git', ['fetch', 'origin', branch]);
+        await exec.exec('git', ['checkout', '-B', branch, `origin/${branch}`]);
+        core.info(`Checked out existing remote branch: ${branch}`);
+        return;
+      } catch (error) {
+        core.warning(`Failed to fetch remote branch ${branch}, will create new: ${error.message}`);
+        // Continue to create new branch
+      }
     }
 
     // Check if branch exists locally
@@ -40637,27 +40647,34 @@ function parseVersion(version) {
 }
 
 /**
- * Format version components to string with zero padding
+ * Format version components to string with optional zero padding
  * @param {number} major - Major version
  * @param {number} minor - Minor version (0-99)
  * @param {number} patch - Patch version (0-99)
+ * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
  * @returns {string} Formatted version string
  */
-function formatVersion(major, minor, patch) {
-  // Pad minor and patch to 2 digits for consistency
-  const minorStr = String(minor).padStart(2, '0');
-  const patchStr = String(patch).padStart(2, '0');
-  return `${major}.${minorStr}.${patchStr}`;
+function formatVersion(major, minor, patch, format = 'X.XX.XX') {
+  if (format === 'X.X.X') {
+    // Single digit format (no padding)
+    return `${major}.${minor}.${patch}`;
+  } else {
+    // Double digit format with padding (X.XX.XX)
+    const minorStr = String(minor).padStart(2, '0');
+    const patchStr = String(patch).padStart(2, '0');
+    return `${major}.${minorStr}.${patchStr}`;
+  }
 }
 
 /**
  * Auto-increment version with rollover at 100
  * @param {string} currentVersion - Current version string
+ * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
  * @returns {string} New version
  */
-function bumpVersion(currentVersion) {
+function bumpVersion(currentVersion, format = 'X.XX.XX') {
   if (!currentVersion) {
-    return '0.00.01';
+    return format === 'X.X.X' ? '0.0.1' : '0.00.01';
   }
 
   const { major, minor, patch } = parseVersion(currentVersion);
@@ -40676,13 +40693,13 @@ function bumpVersion(currentVersion) {
       newMajor++;
 
       if (newMajor >= 100) {
-        core.warning('Version has reached maximum (99.99.99), resetting to 0.00.01');
-        return '0.00.01';
+        core.warning('Version has reached maximum (99.99.99), resetting to 0.0.1');
+        return format === 'X.X.X' ? '0.0.1' : '0.00.01';
       }
     }
   }
 
-  return formatVersion(newMajor, newMinor, newPatch);
+  return formatVersion(newMajor, newMinor, newPatch, format);
 }
 
 /**
@@ -40690,9 +40707,10 @@ function bumpVersion(currentVersion) {
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
+ * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
  * @returns {Promise<Object>} Version result
  */
-async function renameThemeWithVersion(token, store, themeId) {
+async function renameThemeWithVersion(token, store, themeId, format = 'X.XX.XX') {
   try {
     // Get current theme name
     const theme = await getThemeById(token, store, themeId);
@@ -40709,7 +40727,7 @@ async function renameThemeWithVersion(token, store, themeId) {
 
     // Auto-increment version
     const oldVersion = versionInfo.version;
-    const newVersion = bumpVersion(oldVersion);
+    const newVersion = bumpVersion(oldVersion, format);
 
     // Build new name
     const newName = `${versionInfo.baseName} [${newVersion}]`;

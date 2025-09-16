@@ -96,6 +96,7 @@ jobs:
           
           # Versioning Configuration
           versioning_enabled: true  # Enable auto-increment versioning (default: true)
+          versioning_format: X.XX.XX  # Version format: X.X.X or X.XX.XX (default: X.XX.XX)
           
           # Optional Features
           dry_run: ${{ inputs.dry_run || false }}  # Test without deploying

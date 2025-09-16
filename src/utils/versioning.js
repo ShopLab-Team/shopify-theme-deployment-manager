@@ -47,27 +47,34 @@ function parseVersion(version) {
 }
 
 /**
- * Format version components to string with zero padding
+ * Format version components to string with optional zero padding
  * @param {number} major - Major version
  * @param {number} minor - Minor version (0-99)
  * @param {number} patch - Patch version (0-99)
+ * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
  * @returns {string} Formatted version string
  */
-function formatVersion(major, minor, patch) {
-  // Pad minor and patch to 2 digits for consistency
-  const minorStr = String(minor).padStart(2, '0');
-  const patchStr = String(patch).padStart(2, '0');
-  return `${major}.${minorStr}.${patchStr}`;
+function formatVersion(major, minor, patch, format = 'X.XX.XX') {
+  if (format === 'X.X.X') {
+    // Single digit format (no padding)
+    return `${major}.${minor}.${patch}`;
+  } else {
+    // Double digit format with padding (X.XX.XX)
+    const minorStr = String(minor).padStart(2, '0');
+    const patchStr = String(patch).padStart(2, '0');
+    return `${major}.${minorStr}.${patchStr}`;
+  }
 }
 
 /**
  * Auto-increment version with rollover at 100
  * @param {string} currentVersion - Current version string
+ * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
  * @returns {string} New version
  */
-function bumpVersion(currentVersion) {
+function bumpVersion(currentVersion, format = 'X.XX.XX') {
   if (!currentVersion) {
-    return '0.00.01';
+    return format === 'X.X.X' ? '0.0.1' : '0.00.01';
   }
 
   const { major, minor, patch } = parseVersion(currentVersion);
@@ -86,13 +93,13 @@ function bumpVersion(currentVersion) {
       newMajor++;
 
       if (newMajor >= 100) {
-        core.warning('Version has reached maximum (99.99.99), resetting to 0.00.01');
-        return '0.00.01';
+        core.warning('Version has reached maximum (99.99.99), resetting to 0.0.1');
+        return format === 'X.X.X' ? '0.0.1' : '0.00.01';
       }
     }
   }
 
-  return formatVersion(newMajor, newMinor, newPatch);
+  return formatVersion(newMajor, newMinor, newPatch, format);
 }
 
 /**
@@ -100,9 +107,10 @@ function bumpVersion(currentVersion) {
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
+ * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
  * @returns {Promise<Object>} Version result
  */
-async function renameThemeWithVersion(token, store, themeId) {
+async function renameThemeWithVersion(token, store, themeId, format = 'X.XX.XX') {
   try {
     // Get current theme name
     const theme = await getThemeById(token, store, themeId);
@@ -119,7 +127,7 @@ async function renameThemeWithVersion(token, store, themeId) {
 
     // Auto-increment version
     const oldVersion = versionInfo.version;
-    const newVersion = bumpVersion(oldVersion);
+    const newVersion = bumpVersion(oldVersion, format);
 
     // Build new name
     const newName = `${versionInfo.baseName} [${newVersion}]`;
