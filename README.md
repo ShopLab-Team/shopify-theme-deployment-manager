@@ -10,7 +10,6 @@ A powerful GitHub Action for automated Shopify theme deployment with staging/pro
 - **💾 Automatic Backups**: Create timestamped backups with retention policies
 - **🏷️ Version Management**: Automatic version incrementing (X.YY.ZZ format with auto-rollover)
 - **📦 Build Integration**: Support for npm, yarn, and pnpm build steps
-- **✅ Theme Check**: Built-in validation with Shopify Theme Check
 - **🎁 Release Packages**: Automatic theme packaging for GitHub releases
 - **🔔 Slack Notifications**: Rich notifications for deployment events
 - **🛡️ Safety Guards**: Prevent accidental live theme overwrites

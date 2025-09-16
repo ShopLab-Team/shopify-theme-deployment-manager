@@ -114,9 +114,8 @@ The action includes these features **built-in** - you don't need additional work
 1. **Slack Notifications**: Automatically sent when `SLACK_WEBHOOK_URL` is provided
 2. **Theme Backups**: Handled internally when `backup_enabled: true`
 3. **Version Management**: Automatic tagging when `versioning_enabled: true`
-4. **Theme Check**: Runs during build when `build_theme_check: true`
-5. **Retry Logic**: Automatic retries for network issues
-6. **Rate Limiting**: Handled internally
+4. **Retry Logic**: Automatic retries for network issues
+5. **Rate Limiting**: Handled internally
 
 ### Optional Workflow Customizations
 

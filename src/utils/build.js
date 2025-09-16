@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require('fs').promises;
 const path = require('path');
-const { checkTheme } = require('./shopify-cli');
 
 /**
  * Build theme assets
@@ -57,25 +56,6 @@ async function buildAssets(buildConfig) {
       });
 
       core.info('✅ Build completed successfully');
-
-      // Run theme check if enabled (optional)
-      if (buildConfig.themeCheck) {
-        core.info('Running theme check...');
-        const checkResult = await checkTheme(process.cwd(), {
-          autoCorrect: buildConfig.themeCheckAutoCorrect || false,
-          json: true,
-        });
-
-        if (!checkResult.success) {
-          if (buildConfig.themeCheckFailOnError) {
-            throw new Error('Theme check found errors. Fix them before deploying.');
-          } else {
-            core.warning('Theme check found issues but continuing deployment.');
-          }
-        } else {
-          core.info('✅ Theme check passed');
-        }
-      }
     } finally {
       // Restore original working directory
       if (cwd !== '.') {

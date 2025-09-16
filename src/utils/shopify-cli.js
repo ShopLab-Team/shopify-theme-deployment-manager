@@ -485,72 +485,6 @@ async function packageTheme(themePath = '.', outputPath = null) {
 }
 
 /**
- * Run theme check for linting
- * @param {string} themePath - Path to theme directory
- * @param {Object} options - Check options
- * @returns {Promise<Object>} Check results
- */
-async function checkTheme(themePath = '.', options = {}) {
-  let output = '';
-  let errorOutput = '';
-
-  const args = ['theme', 'check', '--path', themePath];
-
-  // Add auto-correct flag if specified
-  if (options.autoCorrect) {
-    args.push('--auto-correct');
-  }
-
-  // Add specific check categories if specified
-  if (options.category) {
-    args.push('--category', options.category);
-  }
-
-  // Note: --json flag is no longer supported in newer Shopify CLI versions
-  // We'll parse the text output instead
-
-  const execOptions = {
-    listeners: {
-      stdout: (data) => {
-        output += data.toString();
-      },
-      stderr: (data) => {
-        errorOutput += data.toString();
-      },
-    },
-    ignoreReturnCode: true, // Theme check returns non-zero if issues found
-  };
-
-  try {
-    core.info(`Running theme check on ${themePath}...`);
-    const exitCode = await exec.exec('shopify', args, execOptions);
-
-    const hasErrors = exitCode !== 0;
-
-    if (options.json) {
-      try {
-        const results = JSON.parse(output);
-        return {
-          success: !hasErrors,
-          results,
-        };
-      } catch (parseError) {
-        core.debug(`Failed to parse theme check JSON: ${parseError.message}`);
-      }
-    }
-
-    return {
-      success: !hasErrors,
-      output,
-      errors: errorOutput,
-    };
-  } catch (error) {
-    core.error(`Failed to run theme check: ${error.message}`);
-    throw error;
-  }
-}
-
-/**
  * Open theme and get URLs
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
@@ -620,6 +554,5 @@ module.exports = {
   pullThemeFiles,
   pushThemeFiles,
   packageTheme,
-  checkTheme,
   openTheme,
 };

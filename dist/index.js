@@ -38650,7 +38650,6 @@ const core = __nccwpck_require__(7484);
 const exec = __nccwpck_require__(5236);
 const fs = (__nccwpck_require__(9896).promises);
 const path = __nccwpck_require__(6928);
-const { checkTheme } = __nccwpck_require__(6206);
 
 /**
  * Build theme assets
@@ -38705,25 +38704,6 @@ async function buildAssets(buildConfig) {
       });
 
       core.info('✅ Build completed successfully');
-
-      // Run theme check if enabled (optional)
-      if (buildConfig.themeCheck) {
-        core.info('Running theme check...');
-        const checkResult = await checkTheme(process.cwd(), {
-          autoCorrect: buildConfig.themeCheckAutoCorrect || false,
-          json: true,
-        });
-
-        if (!checkResult.success) {
-          if (buildConfig.themeCheckFailOnError) {
-            throw new Error('Theme check found errors. Fix them before deploying.');
-          } else {
-            core.warning('Theme check found issues but continuing deployment.');
-          }
-        } else {
-          core.info('✅ Theme check passed');
-        }
-      }
     } finally {
       // Restore original working directory
       if (cwd !== '.') {
@@ -38855,9 +38835,6 @@ function getConfig() {
       packageManager: getInput('build_package_manager') || 'npm',
       command: getInput('build_command') || 'npm ci && npm run build',
       cwd: getInput('build_cwd') || '.',
-      themeCheck: parseBoolean(getInput('build_theme_check')),
-      themeCheckAutoCorrect: parseBoolean(getInput('build_theme_check_auto_correct')),
-      themeCheckFailOnError: parseBoolean(getInput('build_theme_check_fail_on_error')),
     },
 
     // JSON configuration
@@ -40138,72 +40115,6 @@ async function packageTheme(themePath = '.', outputPath = null) {
 }
 
 /**
- * Run theme check for linting
- * @param {string} themePath - Path to theme directory
- * @param {Object} options - Check options
- * @returns {Promise<Object>} Check results
- */
-async function checkTheme(themePath = '.', options = {}) {
-  let output = '';
-  let errorOutput = '';
-
-  const args = ['theme', 'check', '--path', themePath];
-
-  // Add auto-correct flag if specified
-  if (options.autoCorrect) {
-    args.push('--auto-correct');
-  }
-
-  // Add specific check categories if specified
-  if (options.category) {
-    args.push('--category', options.category);
-  }
-
-  // Note: --json flag is no longer supported in newer Shopify CLI versions
-  // We'll parse the text output instead
-
-  const execOptions = {
-    listeners: {
-      stdout: (data) => {
-        output += data.toString();
-      },
-      stderr: (data) => {
-        errorOutput += data.toString();
-      },
-    },
-    ignoreReturnCode: true, // Theme check returns non-zero if issues found
-  };
-
-  try {
-    core.info(`Running theme check on ${themePath}...`);
-    const exitCode = await exec.exec('shopify', args, execOptions);
-
-    const hasErrors = exitCode !== 0;
-
-    if (options.json) {
-      try {
-        const results = JSON.parse(output);
-        return {
-          success: !hasErrors,
-          results,
-        };
-      } catch (parseError) {
-        core.debug(`Failed to parse theme check JSON: ${parseError.message}`);
-      }
-    }
-
-    return {
-      success: !hasErrors,
-      output,
-      errors: errorOutput,
-    };
-  } catch (error) {
-    core.error(`Failed to run theme check: ${error.message}`);
-    throw error;
-  }
-}
-
-/**
  * Open theme and get URLs
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
@@ -40273,7 +40184,6 @@ module.exports = {
   pullThemeFiles,
   pushThemeFiles,
   packageTheme,
-  checkTheme,
   openTheme,
 };
 

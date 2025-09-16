@@ -86,24 +86,6 @@ This document provides a comprehensive reference for all configuration options a
 - **Use Case**: For monorepo setups or themes in subdirectories
 - **Example**: `build_cwd: ./theme`
 
-### `build_theme_check`
-- **Description**: Run Shopify Theme Check after build to validate theme code
-- **Default**: `false`
-- **Options**: `true` or `false`
-- **Use Case**: Ensure theme follows best practices before deployment
-
-### `build_theme_check_auto_correct`
-- **Description**: Automatically fix issues found by Theme Check where possible
-- **Default**: `false`
-- **Options**: `true` or `false`
-- **Note**: Only fixes issues that can be safely auto-corrected
-
-### `build_theme_check_fail_on_error`
-- **Description**: Fail the deployment if Theme Check finds errors
-- **Default**: `false`
-- **Options**: `true` or `false`
-- **Use Case**: Enforce code quality standards in CI/CD pipeline
-
 ## JSON Pull Configuration
 
 ### `json_pull_globs`

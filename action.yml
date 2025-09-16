@@ -52,21 +52,6 @@ inputs:
     required: false
     default: '.'
   
-  build_theme_check:
-    description: 'Run theme check after build'
-    required: false
-    default: 'false'
-  
-  build_theme_check_auto_correct:
-    description: 'Auto-correct theme check issues'
-    required: false
-    default: 'false'
-  
-  build_theme_check_fail_on_error:
-    description: 'Fail deployment if theme check finds errors'
-    required: false
-    default: 'false'
-  
   # JSON Pull Configuration
   json_pull_globs:
     description: 'Glob patterns for JSON files to pull from live theme (newline-separated)'
@@ -259,6 +244,3 @@ runs:
         INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
         INPUT_SYNC_TYPE: ${{ inputs.sync_type }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}
-        INPUT_BUILD_THEME_CHECK: ${{ inputs.build_theme_check }}
-        INPUT_BUILD_THEME_CHECK_AUTO_CORRECT: ${{ inputs.build_theme_check_auto_correct }}
-        INPUT_BUILD_THEME_CHECK_FAIL_ON_ERROR: ${{ inputs.build_theme_check_fail_on_error }}
