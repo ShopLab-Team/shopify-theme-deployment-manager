@@ -11,6 +11,7 @@ jest.mock('@actions/exec');
 jest.mock('../../utils/shopify-cli');
 jest.mock('../../utils/slack');
 jest.mock('../../utils/git', () => ({
+  configureGitUser: jest.fn(),
   getCurrentBranch: jest.fn(),
   getChangedFiles: jest.fn(),
   commitChanges: jest.fn(),

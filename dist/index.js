@@ -37416,17 +37416,48 @@ async function run() {
 
     // Set outputs
     if (result) {
-      if (result.themeId) core.setOutput('theme_id', result.themeId);
-      if (result.themeName) core.setOutput('theme_name', result.themeName);
-      if (result.previewUrl) core.setOutput('preview_url', result.previewUrl);
-      if (result.editorUrl) core.setOutput('editor_url', result.editorUrl);
-      if (result.version) core.setOutput('version', result.version);
-      if (result.packagePath) core.setOutput('package_path', result.packagePath);
+      const outputs = [
+        'themeId',
+        'themeName',
+        'previewUrl',
+        'editorUrl',
+        'version',
+        'packagePath',
+        'synced',
+        'filesCount',
+        'branch',
+        'pullRequestUrl',
+        'deploymentTime',
+      ];
+      const outputMap = {
+        themeId: 'theme_id',
+        themeName: 'theme_name',
+        previewUrl: 'preview_url',
+        editorUrl: 'editor_url',
+        packagePath: 'package_path',
+        filesCount: 'files_count',
+        pullRequestUrl: 'pull_request_url',
+        deploymentTime: 'deployment_time',
+      };
+
+      for (const key of outputs) {
+        if (result[key]) {
+          const outputKey = outputMap[key] || key;
+          core.setOutput(outputKey, result[key]);
+        }
+      }
     }
 
     core.info('✅ Action completed successfully!');
   } catch (error) {
     core.setFailed(`Action failed: ${error.message}`);
+    // Check for additional context from command execution errors
+    if (error.stderr) {
+      core.error(`Stderr: ${error.stderr}`);
+    }
+    if (error.stdout) {
+      core.info(`Stdout: ${error.stdout}`);
+    }
     if (error.stack) {
       core.debug(error.stack);
     }
@@ -37942,6 +37973,7 @@ const { getLiveTheme, pullThemeFiles } = __nccwpck_require__(6206);
 const { normalizeStore } = __nccwpck_require__(6236);
 const { sendSlackNotification } = __nccwpck_require__(1343);
 const {
+  configureGitUser,
   createPullRequest,
   pushToRemoteBranch,
   getCurrentBranch,
@@ -38109,6 +38141,7 @@ async function syncLive(config) {
 
     // Step 6: Commit changes
     core.startGroup('💾 Committing changes');
+    await configureGitUser(); // Configure git user before committing
     await exec.exec('git', ['add', '.']);
     await exec.exec('git', ['commit', '-m', config.sync.commitMessage]);
     core.info('Changes committed');
@@ -38243,6 +38276,7 @@ const exec = __nccwpck_require__(5236);
 const { format, utcToZonedTime } = __nccwpck_require__(3570);
 const { normalizeStore } = __nccwpck_require__(6236);
 const { pollUntil } = __nccwpck_require__(4141);
+const { getLiveTheme, listThemes, getThemeById } = __nccwpck_require__(6206);
 
 /**
  * Create a backup of the current live theme
@@ -38267,7 +38301,6 @@ async function createBackup(token, store, options = {}) {
     core.info(`Timezone: ${timezone}`);
 
     // Get live theme to duplicate
-    const { getLiveTheme } = __nccwpck_require__(6206);
     const liveTheme = await getLiveTheme(token, store);
 
     if (!liveTheme) {
@@ -38379,7 +38412,6 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
 
     // If we couldn't get theme from output, find it by name
     if (!newTheme) {
-      const { listThemes } = __nccwpck_require__(6206);
       const themes = await listThemes(token, store);
       newTheme = themes.find((t) => t.name === name);
 
@@ -38405,44 +38437,6 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
 }
 
 /**
- * Create a new empty theme (DEPRECATED - not used anymore)
- * @param {string} token - Theme access token
- * @param {string} store - Store domain
- * @param {string} name - Theme name
- * @returns {Promise<Object>} New theme
- */
-async function createNewTheme(token, store, name) {
-  // This function is no longer used as we handle theme creation
-  // directly in duplicateTheme using push --unpublished
-  const storeDomain = normalizeStore(store);
-  let output = '';
-
-  const options = {
-    listeners: {
-      stdout: (data) => {
-        output += data.toString();
-      },
-    },
-    env: {
-      ...process.env,
-      SHOPIFY_CLI_THEME_TOKEN: token,
-      SHOPIFY_FLAG_STORE: storeDomain,
-    },
-    silent: true,
-  };
-
-  // Initialize new theme
-  await exec.exec(
-    'shopify',
-    ['theme', 'init', '--store', storeDomain, '--name', name, '--json'],
-    options
-  );
-
-  const result = JSON.parse(output);
-  return result.theme;
-}
-
-/**
  * Wait for theme processing to complete
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
@@ -38451,8 +38445,6 @@ async function createNewTheme(token, store, name) {
  * @returns {Promise<void>}
  */
 async function waitForThemeProcessing(token, store, themeId, timeout = 300) {
-  const { getThemeById } = __nccwpck_require__(6206);
-
   await pollUntil(
     async () => {
       const theme = await getThemeById(token, store, themeId);
@@ -38480,7 +38472,6 @@ async function cleanupBackups(token, store, options = {}) {
     core.info(`Enforcing backup retention policy (keep ${retention} backups)...`);
 
     // List all themes
-    const { listThemes } = __nccwpck_require__(6206);
     const themes = await listThemes(token, store);
 
     // Filter backup themes
@@ -38573,7 +38564,6 @@ async function checkThemeCapacity(token, store, options = {}) {
   const { maxThemes = 20, prefix = 'BACKUP_' } = options;
 
   try {
-    const { listThemes } = __nccwpck_require__(6206);
     const themes = await listThemes(token, store);
 
     const currentCount = themes.length;
@@ -38622,7 +38612,6 @@ async function ensureThemeCapacity(token, store, options = {}) {
   core.info('Theme limit reached, cleaning up old backups...');
 
   // Try to free up one slot by deleting oldest backup
-  const { listThemes } = __nccwpck_require__(6206);
   const themes = await listThemes(token, store);
   const backups = themes
     .filter((t) => t.name.startsWith(options.prefix || 'BACKUP_') && t.role !== 'main')
@@ -38641,7 +38630,6 @@ async function ensureThemeCapacity(token, store, options = {}) {
 module.exports = {
   createBackup,
   duplicateTheme,
-  createNewTheme,
   waitForThemeProcessing,
   cleanupBackups,
   deleteTheme,
@@ -38707,22 +38695,11 @@ async function buildAssets(buildConfig) {
         return;
       }
 
-      // Parse and execute build command
-      const commands = command.split('&&').map((cmd) => cmd.trim());
-
-      for (const cmd of commands) {
-        core.info(`Executing: ${cmd}`);
-
-        // Parse command and arguments
-        const parts = cmd.split(' ');
-        const executable = parts[0];
-        const args = parts.slice(1);
-
-        // Execute command
-        await exec.exec(executable, args, {
-          cwd: process.cwd(),
-        });
-      }
+      // Execute the build command directly in a shell for robustness
+      core.info(`Executing: ${command}`);
+      await exec.exec('/bin/bash', ['-c', command], {
+        cwd: buildConfig.cwd || process.cwd(),
+      });
 
       core.info('✅ Build completed successfully');
 
@@ -38755,30 +38732,6 @@ async function buildAssets(buildConfig) {
     core.error(`Build failed: ${error.message}`);
     throw error;
   }
-}
-
-/**
- * Check if build is needed based on file changes
- * @param {string[]} changedFiles - List of changed files
- * @returns {boolean} True if build is needed
- */
-function isBuildNeeded(changedFiles) {
-  const buildTriggerPatterns = [
-    /\.js$/,
-    /\.ts$/,
-    /\.jsx$/,
-    /\.tsx$/,
-    /\.scss$/,
-    /\.sass$/,
-    /\.less$/,
-    /\.css$/,
-    /package\.json$/,
-    /package-lock\.json$/,
-    /yarn\.lock$/,
-    /pnpm-lock\.yaml$/,
-  ];
-
-  return changedFiles.some((file) => buildTriggerPatterns.some((pattern) => pattern.test(file)));
 }
 
 /**
@@ -38816,7 +38769,6 @@ async function detectPackageManager(cwd = '.') {
 
 module.exports = {
   buildAssets,
-  isBuildNeeded,
   detectPackageManager,
 };
 
@@ -38854,6 +38806,22 @@ function parseBoolean(input) {
     return input.toLowerCase() === 'true';
   }
   return false;
+}
+
+/**
+ * Get the value for sync on staging setting
+ * @param {Function} getInput - Function to get input values
+ * @returns {string} The sync on staging value
+ */
+function getSyncOnStagingValue(getInput) {
+  if (process.env.SYNC_JSON_ON_STAGING !== undefined) {
+    return process.env.SYNC_JSON_ON_STAGING;
+  }
+  const input = getInput('json_sync_on_staging');
+  if (input !== '') {
+    return input;
+  }
+  return 'true'; // Default value
 }
 
 /**
@@ -38895,13 +38863,7 @@ function getConfig() {
         getInput('json_pull_globs') ||
           'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
       ),
-      syncOnStaging: parseBoolean(
-        process.env.SYNC_JSON_ON_STAGING !== undefined
-          ? process.env.SYNC_JSON_ON_STAGING
-          : getInput('json_sync_on_staging') !== ''
-            ? getInput('json_sync_on_staging')
-            : 'true'
-      ),
+      syncOnStaging: parseBoolean(getSyncOnStagingValue(getInput)),
     },
 
     // Push configuration
@@ -38997,6 +38959,18 @@ module.exports = {
 const core = __nccwpck_require__(7484);
 const exec = __nccwpck_require__(5236);
 const github = __nccwpck_require__(3228);
+
+/**
+ * Configure Git user for commits
+ * @returns {Promise<void>}
+ */
+async function configureGitUser() {
+  const name = 'github-actions[bot]';
+  const email = 'github-actions[bot]@users.noreply.github.com';
+  await exec.exec('git', ['config', 'user.name', name]);
+  await exec.exec('git', ['config', 'user.email', email]);
+  core.info(`Configured git user as ${name}`);
+}
 
 /**
  * Create a pull request
@@ -39189,31 +39163,8 @@ async function getChangedFiles(baseBranch = 'main') {
     .filter((line) => line.length > 0);
 }
 
-/**
- * Stash current changes
- * @param {string} message - Stash message
- * @returns {Promise<void>}
- */
-async function stashChanges(message = 'Auto-stash') {
-  await exec.exec('git', ['stash', 'push', '-m', message]);
-  core.info('Changes stashed');
-}
-
-/**
- * Pop stashed changes
- * @returns {Promise<void>}
- */
-async function popStash() {
-  try {
-    await exec.exec('git', ['stash', 'pop']);
-    core.info('Stashed changes restored');
-  } catch (error) {
-    core.warning('Failed to pop stash, might have conflicts');
-    throw error;
-  }
-}
-
 module.exports = {
+  configureGitUser,
   createPullRequest,
   pushToRemoteBranch,
   branchExists,
@@ -39222,8 +39173,6 @@ module.exports = {
   fetchFromRemote,
   createOrCheckoutBranch,
   getChangedFiles,
-  stashChanges,
-  popStash,
 };
 
 
@@ -39366,121 +39315,9 @@ async function pollUntil(conditionFn, options = {}) {
   throw new Error(`Timeout after ${timeout / 1000} seconds: ${message}`);
 }
 
-/**
- * Handle Shopify rate limits
- * @param {Function} fn - Function to execute
- * @param {Object} options - Rate limit options
- * @returns {Promise<any>} Result of function
- */
-async function withRateLimit(fn, options = {}) {
-  const {
-    bucketSize = 40, // Shopify allows 40 requests per app per store per minute
-    refillRate = 2, // 2 requests per second
-    maxWaitTime = 60000, // 1 minute max wait
-  } = options;
-
-  // Simple token bucket implementation
-  let tokens = bucketSize;
-  let lastRefill = Date.now();
-
-  return withRetry(
-    async () => {
-      // Refill tokens based on time passed
-      const now = Date.now();
-      const timePassed = now - lastRefill;
-      const tokensToAdd = Math.floor((timePassed / 1000) * refillRate);
-
-      if (tokensToAdd > 0) {
-        tokens = Math.min(bucketSize, tokens + tokensToAdd);
-        lastRefill = now;
-      }
-
-      // Check if we have tokens available
-      if (tokens <= 0) {
-        const waitTime = Math.ceil(((1 - tokens) / refillRate) * 1000);
-
-        if (waitTime > maxWaitTime) {
-          throw new Error(
-            `Rate limit wait time (${waitTime}ms) exceeds maximum (${maxWaitTime}ms)`
-          );
-        }
-
-        core.info(`⏳ Rate limit reached, waiting ${waitTime / 1000} seconds...`);
-        await sleep(waitTime);
-
-        // Refill after waiting
-        tokens = Math.min(bucketSize, (refillRate * waitTime) / 1000);
-      }
-
-      // Consume a token and execute
-      tokens--;
-
-      try {
-        return await fn();
-      } catch (error) {
-        // If it's a rate limit error, reset our tokens
-        if (error.status === 429 || (error.message && error.message.includes('rate limit'))) {
-          tokens = 0;
-
-          // Extract retry-after header if available
-          const retryAfter = error.headers && error.headers['retry-after'];
-          if (retryAfter) {
-            const waitTime = parseInt(retryAfter) * 1000;
-            core.info(`⏳ Server says retry after ${retryAfter} seconds`);
-            await sleep(waitTime);
-          }
-        }
-
-        throw error;
-      }
-    },
-    {
-      shouldRetry: (error) =>
-        // Always retry rate limit errors
-        error.status === 429 ||
-        (error.message && error.message.includes('rate limit')) ||
-        DEFAULT_OPTIONS.shouldRetry(error),
-    }
-  );
-}
-
-/**
- * Create a function with built-in retry logic
- * @param {Function} fn - Function to wrap
- * @param {Object} options - Retry options
- * @returns {Function} Wrapped function
- */
-function retryable(fn, options = {}) {
-  return async (...args) => withRetry(() => fn(...args), options);
-}
-
-/**
- * Check if an error is retryable
- * @param {Error} error - Error to check
- * @returns {boolean} True if retryable
- */
-function isRetryableError(error) {
-  return DEFAULT_OPTIONS.shouldRetry(error);
-}
-
-/**
- * Calculate exponential backoff delay
- * @param {number} attempt - Attempt number (0-based)
- * @param {Object} options - Backoff options
- * @returns {number} Delay in milliseconds
- */
-function calculateBackoff(attempt, options = {}) {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  return Math.min(opts.initialDelay * Math.pow(opts.backoffMultiplier, attempt), opts.maxDelay);
-}
-
 module.exports = {
   withRetry,
   pollUntil,
-  withRateLimit,
-  retryable,
-  isRetryableError,
-  calculateBackoff,
   sleep,
 };
 
@@ -39513,7 +39350,7 @@ function sanitizeInput(input, name = 'input') {
 
   for (const pattern of dangerousPatterns) {
     if (pattern.test(str)) {
-      core.warning(`Potentially dangerous pattern detected in ${name}: ${pattern}`);
+      throw new Error(`Potentially dangerous pattern detected in ${name}. Halting execution.`);
     }
   }
 
@@ -39650,7 +39487,7 @@ function sanitizeWebhookUrl(url) {
 
     if (!isAllowed) {
       core.warning(`Webhook domain not in allowlist: ${parsed.hostname}`);
-      // Still return it but warn
+      return null; // Return null to prevent use of the untrusted URL
     }
 
     return url;
@@ -39778,7 +39615,7 @@ async function installShopifyCLI() {
   try {
     core.info('Installing Shopify CLI...');
 
-    // Install @shopify/cli and @shopify/theme globally
+    // Install @shopify/cli globally (theme plugin is now bundled)
     await exec.exec('npm', ['install', '-g', '@shopify/cli@latest']);
 
     // Verify installation
@@ -39923,7 +39760,7 @@ async function getLiveTheme(token, store) {
     });
 
     // The published theme has role 'main' in Shopify
-    const liveTheme = themes.find((theme) => theme.role === 'main' || theme.role === 'live');
+    const liveTheme = themes.find((theme) => theme.role === 'main');
 
     if (liveTheme) {
       core.info(`Found live theme: ${liveTheme.name} (ID: ${liveTheme.id})`);
@@ -40595,21 +40432,9 @@ function buildSlackMessage(params) {
   };
 }
 
-/**
- * Build simple text notification
- * @param {string} message - Message text
- * @returns {Object} Simple Slack message
- */
-function buildSimpleMessage(message) {
-  return {
-    text: message,
-  };
-}
-
 module.exports = {
   sendSlackNotification,
   buildSlackMessage,
-  buildSimpleMessage,
 };
 
 
@@ -40619,58 +40444,56 @@ module.exports = {
 /***/ ((module) => {
 
 /**
- * Validate configuration based on mode
+ * Validate staging mode specific requirements
  * @param {Object} config - Configuration object
- * @returns {string[]} Array of validation errors
+ * @param {string[]} errors - Array to collect errors
  */
-function validateInputs(config) {
-  const errors = [];
-
-  // Common validations
-  if (!config.mode) {
-    errors.push('Mode is required');
+function validateStaging(config, errors) {
+  if (!config.secrets.themeToken) {
+    errors.push('SHOPIFY_CLI_THEME_TOKEN is required for staging mode');
   }
-
-  if (!config.store) {
-    errors.push('Store is required. Provide it as "store" input or SHOPIFY_STORE_URL secret');
+  if (!config.secrets.stagingThemeId) {
+    errors.push('STAGING_THEME_ID is required for staging mode');
   }
+}
 
-  // Mode-specific validations
-  switch (config.mode) {
-    case 'staging':
-      if (!config.secrets.themeToken) {
-        errors.push('SHOPIFY_CLI_THEME_TOKEN is required for staging mode');
-      }
-      if (!config.secrets.stagingThemeId) {
-        errors.push('STAGING_THEME_ID is required for staging mode');
-      }
-      break;
-
-    case 'production':
-      if (!config.secrets.themeToken) {
-        errors.push('SHOPIFY_CLI_THEME_TOKEN is required for production mode');
-      }
-      if (config.backup.retention < 0) {
-        errors.push('Backup retention must be a positive number');
-      }
-      break;
-
-    case 'sync-live':
-      if (!config.secrets.themeToken) {
-        errors.push('SHOPIFY_CLI_THEME_TOKEN is required for sync-live mode');
-      }
-      if (!config.secrets.githubToken && config.sync.type === 'pr') {
-        errors.push('GITHUB_TOKEN is required when sync type is set to PR');
-      }
-      if (!['pr', 'push'].includes(config.sync.type)) {
-        errors.push('Sync type must be pr or push');
-      }
-      break;
-
-    default:
-      errors.push(`Invalid mode: ${config.mode}. Must be staging, production, or sync-live`);
+/**
+ * Validate production mode specific requirements
+ * @param {Object} config - Configuration object
+ * @param {string[]} errors - Array to collect errors
+ */
+function validateProduction(config, errors) {
+  if (!config.secrets.themeToken) {
+    errors.push('SHOPIFY_CLI_THEME_TOKEN is required for production mode');
   }
+  if (config.backup.retention < 0) {
+    errors.push('Backup retention must be a positive number');
+  }
+}
 
+/**
+ * Validate sync-live mode specific requirements
+ * @param {Object} config - Configuration object
+ * @param {string[]} errors - Array to collect errors
+ */
+function validateSyncLive(config, errors) {
+  if (!config.secrets.themeToken) {
+    errors.push('SHOPIFY_CLI_THEME_TOKEN is required for sync-live mode');
+  }
+  if (!config.secrets.githubToken && config.sync.type === 'pr') {
+    errors.push('GITHUB_TOKEN is required when sync type is set to PR');
+  }
+  if (!['pr', 'push'].includes(config.sync.type)) {
+    errors.push('Sync type must be pr or push');
+  }
+}
+
+/**
+ * Validate common configuration requirements
+ * @param {Object} config - Configuration object
+ * @param {string[]} errors - Array to collect errors
+ */
+function validateCommon(config, errors) {
   // Validate package manager
   if (!['npm', 'yarn', 'pnpm'].includes(config.build.packageManager)) {
     errors.push('Package manager must be npm, yarn, or pnpm');
@@ -40691,6 +40514,43 @@ function validateInputs(config) {
     errors.push(
       `Invalid store format: ${config.store}. Must be alphanumeric with hyphens, 3-60 characters`
     );
+  }
+}
+
+/**
+ * Validate configuration based on mode
+ * @param {Object} config - Configuration object
+ * @returns {string[]} Array of validation errors
+ */
+function validateInputs(config) {
+  const errors = [];
+
+  // Check required base fields
+  if (!config.mode) {
+    errors.push('Mode is required');
+    return errors; // Can't continue without mode
+  }
+
+  if (!config.store) {
+    errors.push('Store is required. Provide it as "store" input or SHOPIFY_STORE_URL secret');
+  }
+
+  // Validate common requirements
+  validateCommon(config, errors);
+
+  // Mode-specific validations
+  switch (config.mode) {
+    case 'staging':
+      validateStaging(config, errors);
+      break;
+    case 'production':
+      validateProduction(config, errors);
+      break;
+    case 'sync-live':
+      validateSyncLive(config, errors);
+      break;
+    default:
+      errors.push(`Invalid mode: ${config.mode}. Must be staging, production, or sync-live`);
   }
 
   return errors;
@@ -40750,6 +40610,7 @@ module.exports = {
 const core = __nccwpck_require__(7484);
 const exec = __nccwpck_require__(5236);
 const { normalizeStore } = __nccwpck_require__(6236);
+const { getThemeById } = __nccwpck_require__(6206);
 
 /**
  * Extract version from theme name
@@ -40853,7 +40714,6 @@ function bumpVersion(currentVersion) {
 async function renameThemeWithVersion(token, store, themeId) {
   try {
     // Get current theme name
-    const { getThemeById } = __nccwpck_require__(6206);
     const theme = await getThemeById(token, store, themeId);
 
     if (!theme) {
@@ -44491,7 +44351,7 @@ module.exports = exports.default;
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
-/*! Axios v1.12.0 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
 const FormData$1 = __nccwpck_require__(6454);
@@ -44874,10 +44734,8 @@ function merge(/* obj1, obj2, obj3, ... */) {
       result[targetKey] = merge({}, val);
     } else if (isArray(val)) {
       result[targetKey] = val.slice();
-    } else {
-      if (!skipUndefined || !isUndefined(val)) {
-        result[targetKey] = val;
-      }
+    } else if (!skipUndefined || !isUndefined(val)) {
+      result[targetKey] = val;
     }
   };
 
@@ -46645,7 +46503,7 @@ function buildFullPath(baseURL, requestedURL, allowAbsoluteUrls) {
   return requestedURL;
 }
 
-const VERSION = "1.12.0";
+const VERSION = "1.12.2";
 
 function parseProtocol(url) {
   const match = /^([-+\w]{1,25})(:?\/\/|:)/.exec(url);
@@ -48425,9 +48283,9 @@ const DEFAULT_CHUNK_SIZE = 64 * 1024;
 
 const {isFunction} = utils$1;
 
-const globalFetchAPI = (({fetch, Request, Response}) => ({
-    fetch, Request, Response
-  }))(utils$1.global);
+const globalFetchAPI = (({Request, Response}) => ({
+  Request, Response
+}))(utils$1.global);
 
 const {
   ReadableStream: ReadableStream$1, TextEncoder: TextEncoder$1
@@ -48443,8 +48301,12 @@ const test = (fn, ...args) => {
 };
 
 const factory = (env) => {
-  const {fetch, Request, Response} = Object.assign({}, globalFetchAPI, env);
-  const isFetchSupported = isFunction(fetch);
+  env = utils$1.merge.call({
+    skipUndefined: true
+  }, globalFetchAPI, env);
+
+  const {fetch: envFetch, Request, Response} = env;
+  const isFetchSupported = envFetch ? isFunction(envFetch) : typeof fetch === 'function';
   const isRequestSupported = isFunction(Request);
   const isResponseSupported = isFunction(Response);
 
@@ -48547,6 +48409,8 @@ const factory = (env) => {
       fetchOptions
     } = resolveConfig(config);
 
+    let _fetch = envFetch || fetch;
+
     responseType = responseType ? (responseType + '').toLowerCase() : 'text';
 
     let composedSignal = composeSignals$1([signal, cancelToken && cancelToken.toAbortSignal()], timeout);
@@ -48606,7 +48470,7 @@ const factory = (env) => {
 
       request = isRequestSupported && new Request(url, resolvedOptions);
 
-      let response = await (isRequestSupported ? fetch(request, fetchOptions) : fetch(url, resolvedOptions));
+      let response = await (isRequestSupported ? _fetch(request, fetchOptions) : _fetch(url, resolvedOptions));
 
       const isStreamResponse = supportsResponseStream && (responseType === 'stream' || responseType === 'response');
 
@@ -48669,12 +48533,8 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = utils$1.merge.call({
-    skipUndefined: true
-  }, globalFetchAPI, config ? config.env : null);
-
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
-
   const seeds = [
     Request, Response, fetch
   ];
@@ -49098,8 +48958,6 @@ class Axios {
     len = requestInterceptorChain.length;
 
     let newConfig = config;
-
-    i = 0;
 
     while (i < len) {
       const onFulfilled = requestInterceptorChain[i++];

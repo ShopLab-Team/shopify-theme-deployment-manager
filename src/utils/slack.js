@@ -218,19 +218,7 @@ function buildSlackMessage(params) {
   };
 }
 
-/**
- * Build simple text notification
- * @param {string} message - Message text
- * @returns {Object} Simple Slack message
- */
-function buildSimpleMessage(message) {
-  return {
-    text: message,
-  };
-}
-
 module.exports = {
   sendSlackNotification,
   buildSlackMessage,
-  buildSimpleMessage,
 };

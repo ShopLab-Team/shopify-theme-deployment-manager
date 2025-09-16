@@ -3,6 +3,18 @@ const exec = require('@actions/exec');
 const github = require('@actions/github');
 
 /**
+ * Configure Git user for commits
+ * @returns {Promise<void>}
+ */
+async function configureGitUser() {
+  const name = 'github-actions[bot]';
+  const email = 'github-actions[bot]@users.noreply.github.com';
+  await exec.exec('git', ['config', 'user.name', name]);
+  await exec.exec('git', ['config', 'user.email', email]);
+  core.info(`Configured git user as ${name}`);
+}
+
+/**
  * Create a pull request
  * @param {Object} options - PR options
  * @returns {Promise<Object>} Created PR
@@ -193,31 +205,8 @@ async function getChangedFiles(baseBranch = 'main') {
     .filter((line) => line.length > 0);
 }
 
-/**
- * Stash current changes
- * @param {string} message - Stash message
- * @returns {Promise<void>}
- */
-async function stashChanges(message = 'Auto-stash') {
-  await exec.exec('git', ['stash', 'push', '-m', message]);
-  core.info('Changes stashed');
-}
-
-/**
- * Pop stashed changes
- * @returns {Promise<void>}
- */
-async function popStash() {
-  try {
-    await exec.exec('git', ['stash', 'pop']);
-    core.info('Stashed changes restored');
-  } catch (error) {
-    core.warning('Failed to pop stash, might have conflicts');
-    throw error;
-  }
-}
-
 module.exports = {
+  configureGitUser,
   createPullRequest,
   pushToRemoteBranch,
   branchExists,
@@ -226,6 +215,4 @@ module.exports = {
   fetchFromRemote,
   createOrCheckoutBranch,
   getChangedFiles,
-  stashChanges,
-  popStash,
 };

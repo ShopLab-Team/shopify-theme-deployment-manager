@@ -50,22 +50,11 @@ async function buildAssets(buildConfig) {
         return;
       }
 
-      // Parse and execute build command
-      const commands = command.split('&&').map((cmd) => cmd.trim());
-
-      for (const cmd of commands) {
-        core.info(`Executing: ${cmd}`);
-
-        // Parse command and arguments
-        const parts = cmd.split(' ');
-        const executable = parts[0];
-        const args = parts.slice(1);
-
-        // Execute command
-        await exec.exec(executable, args, {
-          cwd: process.cwd(),
-        });
-      }
+      // Execute the build command directly in a shell for robustness
+      core.info(`Executing: ${command}`);
+      await exec.exec('/bin/bash', ['-c', command], {
+        cwd: buildConfig.cwd || process.cwd(),
+      });
 
       core.info('✅ Build completed successfully');
 
@@ -98,30 +87,6 @@ async function buildAssets(buildConfig) {
     core.error(`Build failed: ${error.message}`);
     throw error;
   }
-}
-
-/**
- * Check if build is needed based on file changes
- * @param {string[]} changedFiles - List of changed files
- * @returns {boolean} True if build is needed
- */
-function isBuildNeeded(changedFiles) {
-  const buildTriggerPatterns = [
-    /\.js$/,
-    /\.ts$/,
-    /\.jsx$/,
-    /\.tsx$/,
-    /\.scss$/,
-    /\.sass$/,
-    /\.less$/,
-    /\.css$/,
-    /package\.json$/,
-    /package-lock\.json$/,
-    /yarn\.lock$/,
-    /pnpm-lock\.yaml$/,
-  ];
-
-  return changedFiles.some((file) => buildTriggerPatterns.some((pattern) => pattern.test(file)));
 }
 
 /**
@@ -159,6 +124,5 @@ async function detectPackageManager(cwd = '.') {
 
 module.exports = {
   buildAssets,
-  isBuildNeeded,
   detectPackageManager,
 };

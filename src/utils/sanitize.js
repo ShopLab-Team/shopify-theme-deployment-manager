@@ -21,7 +21,7 @@ function sanitizeInput(input, name = 'input') {
 
   for (const pattern of dangerousPatterns) {
     if (pattern.test(str)) {
-      core.warning(`Potentially dangerous pattern detected in ${name}: ${pattern}`);
+      throw new Error(`Potentially dangerous pattern detected in ${name}. Halting execution.`);
     }
   }
 
@@ -158,7 +158,7 @@ function sanitizeWebhookUrl(url) {
 
     if (!isAllowed) {
       core.warning(`Webhook domain not in allowlist: ${parsed.hostname}`);
-      // Still return it but warn
+      return null; // Return null to prevent use of the untrusted URL
     }
 
     return url;

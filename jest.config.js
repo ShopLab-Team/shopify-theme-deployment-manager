@@ -8,6 +8,8 @@ module.exports = {
     '!src/utils/git.js', // Git operations, tested via integration
     '!src/utils/build.js', // Build operations, tested via integration
     '!src/utils/sanitize.js', // Security sanitization, tested via integration
+    '!src/utils/config.js', // Configuration parsing, tested via integration
+    '!src/utils/shopify-cli.js', // CLI wrapper, tested via integration
     '!**/node_modules/**',
     '!**/dist/**',
     '!**/coverage/**'
@@ -16,10 +18,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
-      branches: 55,
-      functions: 75,
-      lines: 75,
-      statements: 75
+      branches: 70,
+      functions: 85,
+      lines: 85,
+      statements: 85
     }
   },
   testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],

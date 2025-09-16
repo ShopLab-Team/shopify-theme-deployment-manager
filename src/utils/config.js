@@ -29,6 +29,22 @@ function parseBoolean(input) {
 }
 
 /**
+ * Get the value for sync on staging setting
+ * @param {Function} getInput - Function to get input values
+ * @returns {string} The sync on staging value
+ */
+function getSyncOnStagingValue(getInput) {
+  if (process.env.SYNC_JSON_ON_STAGING !== undefined) {
+    return process.env.SYNC_JSON_ON_STAGING;
+  }
+  const input = getInput('json_sync_on_staging');
+  if (input !== '') {
+    return input;
+  }
+  return 'true'; // Default value
+}
+
+/**
  * Get configuration from action inputs
  * @returns {Object} Configuration object
  */
@@ -67,13 +83,7 @@ function getConfig() {
         getInput('json_pull_globs') ||
           'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
       ),
-      syncOnStaging: parseBoolean(
-        process.env.SYNC_JSON_ON_STAGING !== undefined
-          ? process.env.SYNC_JSON_ON_STAGING
-          : getInput('json_sync_on_staging') !== ''
-            ? getInput('json_sync_on_staging')
-            : 'true'
-      ),
+      syncOnStaging: parseBoolean(getSyncOnStagingValue(getInput)),
     },
 
     // Push configuration

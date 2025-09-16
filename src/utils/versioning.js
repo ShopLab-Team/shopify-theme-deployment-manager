@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const exec = require('@actions/exec');
 const { normalizeStore } = require('./validators');
+const { getThemeById } = require('./shopify-cli');
 
 /**
  * Extract version from theme name
@@ -104,7 +105,6 @@ function bumpVersion(currentVersion) {
 async function renameThemeWithVersion(token, store, themeId) {
   try {
     // Get current theme name
-    const { getThemeById } = require('./shopify-cli');
     const theme = await getThemeById(token, store, themeId);
 
     if (!theme) {

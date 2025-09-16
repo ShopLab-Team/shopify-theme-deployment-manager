@@ -1,56 +1,54 @@
 /**
- * Validate configuration based on mode
+ * Validate staging mode specific requirements
  * @param {Object} config - Configuration object
- * @returns {string[]} Array of validation errors
+ * @param {string[]} errors - Array to collect errors
  */
-function validateInputs(config) {
-  const errors = [];
-
-  // Common validations
-  if (!config.mode) {
-    errors.push('Mode is required');
+function validateStaging(config, errors) {
+  if (!config.secrets.themeToken) {
+    errors.push('SHOPIFY_CLI_THEME_TOKEN is required for staging mode');
   }
-
-  if (!config.store) {
-    errors.push('Store is required. Provide it as "store" input or SHOPIFY_STORE_URL secret');
+  if (!config.secrets.stagingThemeId) {
+    errors.push('STAGING_THEME_ID is required for staging mode');
   }
+}
 
-  // Mode-specific validations
-  switch (config.mode) {
-    case 'staging':
-      if (!config.secrets.themeToken) {
-        errors.push('SHOPIFY_CLI_THEME_TOKEN is required for staging mode');
-      }
-      if (!config.secrets.stagingThemeId) {
-        errors.push('STAGING_THEME_ID is required for staging mode');
-      }
-      break;
-
-    case 'production':
-      if (!config.secrets.themeToken) {
-        errors.push('SHOPIFY_CLI_THEME_TOKEN is required for production mode');
-      }
-      if (config.backup.retention < 0) {
-        errors.push('Backup retention must be a positive number');
-      }
-      break;
-
-    case 'sync-live':
-      if (!config.secrets.themeToken) {
-        errors.push('SHOPIFY_CLI_THEME_TOKEN is required for sync-live mode');
-      }
-      if (!config.secrets.githubToken && config.sync.type === 'pr') {
-        errors.push('GITHUB_TOKEN is required when sync type is set to PR');
-      }
-      if (!['pr', 'push'].includes(config.sync.type)) {
-        errors.push('Sync type must be pr or push');
-      }
-      break;
-
-    default:
-      errors.push(`Invalid mode: ${config.mode}. Must be staging, production, or sync-live`);
+/**
+ * Validate production mode specific requirements
+ * @param {Object} config - Configuration object
+ * @param {string[]} errors - Array to collect errors
+ */
+function validateProduction(config, errors) {
+  if (!config.secrets.themeToken) {
+    errors.push('SHOPIFY_CLI_THEME_TOKEN is required for production mode');
   }
+  if (config.backup.retention < 0) {
+    errors.push('Backup retention must be a positive number');
+  }
+}
 
+/**
+ * Validate sync-live mode specific requirements
+ * @param {Object} config - Configuration object
+ * @param {string[]} errors - Array to collect errors
+ */
+function validateSyncLive(config, errors) {
+  if (!config.secrets.themeToken) {
+    errors.push('SHOPIFY_CLI_THEME_TOKEN is required for sync-live mode');
+  }
+  if (!config.secrets.githubToken && config.sync.type === 'pr') {
+    errors.push('GITHUB_TOKEN is required when sync type is set to PR');
+  }
+  if (!['pr', 'push'].includes(config.sync.type)) {
+    errors.push('Sync type must be pr or push');
+  }
+}
+
+/**
+ * Validate common configuration requirements
+ * @param {Object} config - Configuration object
+ * @param {string[]} errors - Array to collect errors
+ */
+function validateCommon(config, errors) {
   // Validate package manager
   if (!['npm', 'yarn', 'pnpm'].includes(config.build.packageManager)) {
     errors.push('Package manager must be npm, yarn, or pnpm');
@@ -71,6 +69,43 @@ function validateInputs(config) {
     errors.push(
       `Invalid store format: ${config.store}. Must be alphanumeric with hyphens, 3-60 characters`
     );
+  }
+}
+
+/**
+ * Validate configuration based on mode
+ * @param {Object} config - Configuration object
+ * @returns {string[]} Array of validation errors
+ */
+function validateInputs(config) {
+  const errors = [];
+
+  // Check required base fields
+  if (!config.mode) {
+    errors.push('Mode is required');
+    return errors; // Can't continue without mode
+  }
+
+  if (!config.store) {
+    errors.push('Store is required. Provide it as "store" input or SHOPIFY_STORE_URL secret');
+  }
+
+  // Validate common requirements
+  validateCommon(config, errors);
+
+  // Mode-specific validations
+  switch (config.mode) {
+    case 'staging':
+      validateStaging(config, errors);
+      break;
+    case 'production':
+      validateProduction(config, errors);
+      break;
+    case 'sync-live':
+      validateSyncLive(config, errors);
+      break;
+    default:
+      errors.push(`Invalid mode: ${config.mode}. Must be staging, production, or sync-live`);
   }
 
   return errors;

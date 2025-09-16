@@ -4,6 +4,7 @@ const { getLiveTheme, pullThemeFiles } = require('../utils/shopify-cli');
 const { normalizeStore } = require('../utils/validators');
 const { sendSlackNotification } = require('../utils/slack');
 const {
+  configureGitUser,
   createPullRequest,
   pushToRemoteBranch,
   getCurrentBranch,
@@ -171,6 +172,7 @@ async function syncLive(config) {
 
     // Step 6: Commit changes
     core.startGroup('💾 Committing changes');
+    await configureGitUser(); // Configure git user before committing
     await exec.exec('git', ['add', '.']);
     await exec.exec('git', ['commit', '-m', config.sync.commitMessage]);
     core.info('Changes committed');

@@ -1,7 +1,7 @@
 const axios = require('axios');
 const github = require('@actions/github');
 const core = require('@actions/core');
-const { sendSlackNotification, buildSlackMessage, buildSimpleMessage } = require('../slack');
+const { sendSlackNotification, buildSlackMessage } = require('../slack');
 
 // Mock dependencies
 jest.mock('axios');
@@ -230,16 +230,6 @@ describe('slack', () => {
           expect.arrayContaining([expect.objectContaining({ text: '📋 View Workflow' })])
         );
       }
-    });
-  });
-
-  describe('buildSimpleMessage', () => {
-    it('should build simple text message', () => {
-      const message = buildSimpleMessage('Test notification');
-
-      expect(message).toEqual({
-        text: 'Test notification',
-      });
     });
   });
 });

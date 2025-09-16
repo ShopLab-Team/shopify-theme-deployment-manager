@@ -85,17 +85,48 @@ async function run() {
 
     // Set outputs
     if (result) {
-      if (result.themeId) core.setOutput('theme_id', result.themeId);
-      if (result.themeName) core.setOutput('theme_name', result.themeName);
-      if (result.previewUrl) core.setOutput('preview_url', result.previewUrl);
-      if (result.editorUrl) core.setOutput('editor_url', result.editorUrl);
-      if (result.version) core.setOutput('version', result.version);
-      if (result.packagePath) core.setOutput('package_path', result.packagePath);
+      const outputs = [
+        'themeId',
+        'themeName',
+        'previewUrl',
+        'editorUrl',
+        'version',
+        'packagePath',
+        'synced',
+        'filesCount',
+        'branch',
+        'pullRequestUrl',
+        'deploymentTime',
+      ];
+      const outputMap = {
+        themeId: 'theme_id',
+        themeName: 'theme_name',
+        previewUrl: 'preview_url',
+        editorUrl: 'editor_url',
+        packagePath: 'package_path',
+        filesCount: 'files_count',
+        pullRequestUrl: 'pull_request_url',
+        deploymentTime: 'deployment_time',
+      };
+
+      for (const key of outputs) {
+        if (result[key]) {
+          const outputKey = outputMap[key] || key;
+          core.setOutput(outputKey, result[key]);
+        }
+      }
     }
 
     core.info('✅ Action completed successfully!');
   } catch (error) {
     core.setFailed(`Action failed: ${error.message}`);
+    // Check for additional context from command execution errors
+    if (error.stderr) {
+      core.error(`Stderr: ${error.stderr}`);
+    }
+    if (error.stdout) {
+      core.info(`Stdout: ${error.stdout}`);
+    }
     if (error.stack) {
       core.debug(error.stack);
     }

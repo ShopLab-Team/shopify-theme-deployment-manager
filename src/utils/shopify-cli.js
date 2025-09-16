@@ -11,7 +11,7 @@ async function installShopifyCLI() {
   try {
     core.info('Installing Shopify CLI...');
 
-    // Install @shopify/cli and @shopify/theme globally
+    // Install @shopify/cli globally (theme plugin is now bundled)
     await exec.exec('npm', ['install', '-g', '@shopify/cli@latest']);
 
     // Verify installation
@@ -156,7 +156,7 @@ async function getLiveTheme(token, store) {
     });
 
     // The published theme has role 'main' in Shopify
-    const liveTheme = themes.find((theme) => theme.role === 'main' || theme.role === 'live');
+    const liveTheme = themes.find((theme) => theme.role === 'main');
 
     if (liveTheme) {
       core.info(`Found live theme: ${liveTheme.name} (ID: ${liveTheme.id})`);

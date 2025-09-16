@@ -3,6 +3,7 @@ const exec = require('@actions/exec');
 const { format, utcToZonedTime } = require('date-fns-tz');
 const { normalizeStore } = require('./validators');
 const { pollUntil } = require('./retry');
+const { getLiveTheme, listThemes, getThemeById } = require('./shopify-cli');
 
 /**
  * Create a backup of the current live theme
@@ -27,7 +28,6 @@ async function createBackup(token, store, options = {}) {
     core.info(`Timezone: ${timezone}`);
 
     // Get live theme to duplicate
-    const { getLiveTheme } = require('./shopify-cli');
     const liveTheme = await getLiveTheme(token, store);
 
     if (!liveTheme) {
@@ -139,7 +139,6 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
 
     // If we couldn't get theme from output, find it by name
     if (!newTheme) {
-      const { listThemes } = require('./shopify-cli');
       const themes = await listThemes(token, store);
       newTheme = themes.find((t) => t.name === name);
 
@@ -165,44 +164,6 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
 }
 
 /**
- * Create a new empty theme (DEPRECATED - not used anymore)
- * @param {string} token - Theme access token
- * @param {string} store - Store domain
- * @param {string} name - Theme name
- * @returns {Promise<Object>} New theme
- */
-async function createNewTheme(token, store, name) {
-  // This function is no longer used as we handle theme creation
-  // directly in duplicateTheme using push --unpublished
-  const storeDomain = normalizeStore(store);
-  let output = '';
-
-  const options = {
-    listeners: {
-      stdout: (data) => {
-        output += data.toString();
-      },
-    },
-    env: {
-      ...process.env,
-      SHOPIFY_CLI_THEME_TOKEN: token,
-      SHOPIFY_FLAG_STORE: storeDomain,
-    },
-    silent: true,
-  };
-
-  // Initialize new theme
-  await exec.exec(
-    'shopify',
-    ['theme', 'init', '--store', storeDomain, '--name', name, '--json'],
-    options
-  );
-
-  const result = JSON.parse(output);
-  return result.theme;
-}
-
-/**
  * Wait for theme processing to complete
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
@@ -211,8 +172,6 @@ async function createNewTheme(token, store, name) {
  * @returns {Promise<void>}
  */
 async function waitForThemeProcessing(token, store, themeId, timeout = 300) {
-  const { getThemeById } = require('./shopify-cli');
-
   await pollUntil(
     async () => {
       const theme = await getThemeById(token, store, themeId);
@@ -240,7 +199,6 @@ async function cleanupBackups(token, store, options = {}) {
     core.info(`Enforcing backup retention policy (keep ${retention} backups)...`);
 
     // List all themes
-    const { listThemes } = require('./shopify-cli');
     const themes = await listThemes(token, store);
 
     // Filter backup themes
@@ -333,7 +291,6 @@ async function checkThemeCapacity(token, store, options = {}) {
   const { maxThemes = 20, prefix = 'BACKUP_' } = options;
 
   try {
-    const { listThemes } = require('./shopify-cli');
     const themes = await listThemes(token, store);
 
     const currentCount = themes.length;
@@ -382,7 +339,6 @@ async function ensureThemeCapacity(token, store, options = {}) {
   core.info('Theme limit reached, cleaning up old backups...');
 
   // Try to free up one slot by deleting oldest backup
-  const { listThemes } = require('./shopify-cli');
   const themes = await listThemes(token, store);
   const backups = themes
     .filter((t) => t.name.startsWith(options.prefix || 'BACKUP_') && t.role !== 'main')
@@ -401,7 +357,6 @@ async function ensureThemeCapacity(token, store, options = {}) {
 module.exports = {
   createBackup,
   duplicateTheme,
-  createNewTheme,
   waitForThemeProcessing,
   cleanupBackups,
   deleteTheme,
