@@ -37686,7 +37686,7 @@ async function productionDeploy(config) {
     } catch (error) {
       // Fallback to constructed URLs
       previewUrl =
-        productionTheme.role === 'main'
+        productionTheme.role === 'main' || productionTheme.role === 'live'
           ? `https://${storeDomain}`
           : `https://${storeDomain}?preview_theme_id=${productionTheme.id}`;
       editorUrl = `https://${storeDomain}/admin/themes/${productionTheme.id}/editor`;
@@ -38504,7 +38504,7 @@ async function cleanupBackups(token, store, options = {}) {
     const deleted = [];
     for (const theme of toDelete) {
       // Double-check theme is safe to delete
-      if (theme.role === 'main') {
+      if (theme.role === 'main' || theme.role === 'live') {
         core.warning(`Skipping deletion of ${theme.name} - it's the published theme!`);
         continue;
       }
@@ -39762,17 +39762,27 @@ async function getLiveTheme(token, store) {
       core.debug(`Theme: ${theme.name} (ID: ${theme.id}, Role: ${theme.role})`);
     });
 
-    // The published theme has role 'main' in Shopify
-    const liveTheme = themes.find((theme) => theme.role === 'main');
+    // The published theme can have role 'main' or 'live' in Shopify
+    // Different API versions and contexts may return different values
+    const liveTheme = themes.find((theme) => theme.role === 'main' || theme.role === 'live');
 
     if (liveTheme) {
-      core.info(`Found live theme: ${liveTheme.name} (ID: ${liveTheme.id})`);
+      core.info(
+        `Found live theme: ${liveTheme.name} (ID: ${liveTheme.id}, Role: ${liveTheme.role})`
+      );
       return liveTheme;
     } else {
       core.warning('No live theme found in the store');
       core.warning(
         `Available themes have the following roles: ${themes.map((t) => t.role).join(', ')}`
       );
+
+      // Provide more detailed information for debugging
+      core.warning('Available themes:');
+      themes.forEach((theme) => {
+        core.warning(`  - ID: ${theme.id}, Name: "${theme.name}", Role: ${theme.role}`);
+      });
+
       return null;
     }
   } catch (error) {

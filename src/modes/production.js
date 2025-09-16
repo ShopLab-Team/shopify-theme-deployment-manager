@@ -207,7 +207,7 @@ async function productionDeploy(config) {
     } catch (error) {
       // Fallback to constructed URLs
       previewUrl =
-        productionTheme.role === 'main'
+        productionTheme.role === 'main' || productionTheme.role === 'live'
           ? `https://${storeDomain}`
           : `https://${storeDomain}?preview_theme_id=${productionTheme.id}`;
       editorUrl = `https://${storeDomain}/admin/themes/${productionTheme.id}/editor`;

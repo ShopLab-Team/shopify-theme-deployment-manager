@@ -228,7 +228,7 @@ async function cleanupBackups(token, store, options = {}) {
     const deleted = [];
     for (const theme of toDelete) {
       // Double-check theme is safe to delete
-      if (theme.role === 'main') {
+      if (theme.role === 'main' || theme.role === 'live') {
         core.warning(`Skipping deletion of ${theme.name} - it's the published theme!`);
         continue;
       }

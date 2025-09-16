@@ -127,7 +127,27 @@ describe('shopify-cli', () => {
 
       const liveTheme = await getLiveTheme('test-token', 'test-store');
       expect(liveTheme).toEqual(mockThemes[0]);
-      expect(core.info).toHaveBeenCalledWith('Found live theme: Dawn (ID: 123456789)');
+      expect(core.info).toHaveBeenCalledWith('Found live theme: Dawn (ID: 123456789, Role: main)');
+    });
+
+    it('should return theme with role "live"', async () => {
+      const mockThemes = [
+        { id: 123456789, name: 'Production', role: 'live' },
+        { id: 987654321, name: 'Staging', role: 'unpublished' },
+      ];
+
+      exec.exec.mockImplementation((cmd, args, options) => {
+        if (options && options.listeners && options.listeners.stdout) {
+          options.listeners.stdout(Buffer.from(JSON.stringify(mockThemes)));
+        }
+        return Promise.resolve(0);
+      });
+
+      const liveTheme = await getLiveTheme('test-token', 'test-store');
+      expect(liveTheme).toEqual(mockThemes[0]);
+      expect(core.info).toHaveBeenCalledWith(
+        'Found live theme: Production (ID: 123456789, Role: live)'
+      );
     });
 
     it('should return null if no live theme', async () => {
