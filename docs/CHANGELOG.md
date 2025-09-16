@@ -16,8 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced test coverage for different sync modes
 
 ### Changed
+- **Simplified Versioning System**:
+  - Replaced semantic versioning (patch/minor/major) with auto-increment system
+  - New format: `X.YY.ZZ` (e.g., 1.02.03) with zero-padding for consistency
+  - Automatic rollover: 100 patches → 1 minor, 100 minors → 1 major
+  - Maximum capacity: 1 million deployments before reset to 0.00.01
+  - Removed `versioning_strategy` input (no longer needed)
 - Default sync behavior changed from JSON-only to all files
 - Improved sync-live commit messages based on sync mode
+
+### Removed
+- `versioning_strategy` input option (replaced by auto-increment)
+- `semver` npm dependency (no longer needed)
 
 ## [1.1.0] - 2025-09-15
 
@@ -78,9 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic cleanup of old backups
 
 - **Version Management**
-  - Automatic semantic versioning for themes
-  - Support for patch/minor/major version strategies
-  - Version tag parsing and bumping
+  - Automatic version incrementing for themes
+  - Simple counter-based versioning (replaced in latest version)
+  - Version tag parsing and auto-incrementing
   - Theme renaming with version tags
 
 - **Notifications**

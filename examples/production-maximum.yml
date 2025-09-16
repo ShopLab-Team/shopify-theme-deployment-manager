@@ -10,14 +10,6 @@ on:
     branches: [main, master]  # Multiple production branches
   workflow_dispatch:  # Allow manual trigger
     inputs:
-      version_strategy:
-        description: 'Version bump strategy'
-        type: choice
-        default: patch
-        options:
-          - patch
-          - minor
-          - major
       skip_backup:
         description: 'Skip backup creation'
         type: boolean
@@ -106,8 +98,7 @@ jobs:
           deploy_allow_live_push: false  # Require PRODUCTION_THEME_ID (default: false)
           
           # Versioning Configuration
-          versioning_enabled: true  # Enable semantic versioning (default: true)
-          versioning_strategy: ${{ inputs.version_strategy || 'patch' }}  # Version bump type
+          versioning_enabled: true  # Enable auto-increment versioning (default: true)
           
           # Optional Features
           dry_run: ${{ inputs.dry_run || false }}  # Test without deploying
@@ -211,6 +202,6 @@ jobs:
           
           echo "#### 🔧 Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Backups**: ${{ !inputs.skip_backup && 'Enabled' || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version Strategy**: ${{ inputs.version_strategy || 'patch' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auto-Versioning**: Enabled (X.YY.ZZ format)" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
     

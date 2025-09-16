@@ -89,8 +89,7 @@ jobs:
           deploy_allow_live_push: false  # Allow live theme push (default: false)
           
           # Versioning Configuration (usually for production)
-          versioning_enabled: false  # Enable versioning (default: true)
-          versioning_strategy: patch  # patch, minor, or major (default: patch)
+          versioning_enabled: false  # Enable auto-increment versioning (default: true)
           
           # Optional Features
           dry_run: ${{ inputs.dry_run || false }}  # Test without deploying

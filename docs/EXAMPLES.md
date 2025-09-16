@@ -277,13 +277,6 @@ on:
         options:
           - staging
           - production
-      version_strategy:
-        description: 'Version bump'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
 
 jobs:
   deploy:
@@ -294,7 +287,6 @@ jobs:
       - uses: ShopLab-Team/shopify-theme-deployment-manager@v1
         with:
           mode: ${{ inputs.mode }}
-          versioning_strategy: ${{ inputs.version_strategy }}
         env:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}

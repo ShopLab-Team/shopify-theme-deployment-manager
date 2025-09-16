@@ -189,18 +189,15 @@ This document provides a comprehensive reference for all configuration options a
 ## Versioning Configuration
 
 ### `versioning_enabled`
-- **Description**: Enable automatic semantic versioning for themes
+- **Description**: Enable automatic version incrementing for production themes
 - **Default**: `true`
 - **Options**: `true` or `false`
-- **Use Case**: Track deployment history with version tags
-
-### `versioning_strategy`
-- **Description**: Version bump strategy for releases
-- **Default**: `patch`
-- **Options**: 
-  - `patch` - Increment patch version (1.0.0 → 1.0.1)
-  - `minor` - Increment minor version (1.0.0 → 1.1.0)
-  - `major` - Increment major version (1.0.0 → 2.0.0)
+- **Use Case**: Track deployment history with auto-incrementing version numbers
+- **Format**: `X.YY.ZZ` (e.g., 1.02.03)
+- **Rollover**: Automatically rolls over at 100:
+  - 100 patches → 1 minor (0.00.99 → 0.01.00)
+  - 100 minors → 1 major (0.99.99 → 1.00.00)
+  - Maximum capacity: 1 million deployments before reset
 
 ## Sync Configuration
 
