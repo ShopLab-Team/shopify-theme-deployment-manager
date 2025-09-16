@@ -271,6 +271,9 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
     core.setOutput('synced', 'true');
     core.setOutput('files_count', changedFiles.length.toString());
     core.setOutput('branch', result.branch);
+    core.setOutput('deployment_time', syncTime.toString());
+    core.setOutput('theme_id', liveTheme.id.toString());
+    core.setOutput('theme_name', liveTheme.name);
     if (pullRequestUrl) {
       core.setOutput('pull_request_url', pullRequestUrl);
     }

@@ -134,7 +134,6 @@ jobs:
             | Metric | Value |
             |--------|-------|
             | **Files Changed** | ${{ steps.sync.outputs.files_count || '0' }} |
-            | **Sync Duration** | ${{ steps.sync.outputs.sync_time || 'N/A' }}s |
             | **Theme ID** | ${{ steps.sync.outputs.theme_id || 'N/A' }} |
             | **Theme Name** | ${{ steps.sync.outputs.theme_name || 'N/A' }} |
             | **Sync Type** | ${{ inputs.sync_files || 'json' }} |
@@ -153,13 +152,11 @@ jobs:
             - Always test on staging before merging to main
             - Consider the impact on active development work
             
-            ### 📝 Files Changed
+            ### 📝 Files Synced
             <details>
-            <summary>Click to expand file list</summary>
+            <summary>Click to see count</summary>
             
-            \`\`\`
-            ${{ steps.sync.outputs.changed_files || 'No file list available' }}
-            \`\`\`
+            **Total Files Synced**: ${{ steps.sync.outputs.files_count || '0' }}
             
             </details>
             
@@ -249,7 +246,6 @@ jobs:
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Status** | ${{ steps.sync.outcome }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Files Changed** | ${{ steps.sync.outputs.files_count || '0' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Sync Duration** | ${{ steps.sync.outputs.sync_time || 'N/A' }}s |" >> $GITHUB_STEP_SUMMARY
           echo "| **Sync Type** | ${{ inputs.sync_files || 'json' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Sync Method** | ${{ inputs.sync_type || 'pr' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Branch** | ${{ steps.sync.outputs.branch || 'remote_changes' }} |" >> $GITHUB_STEP_SUMMARY
