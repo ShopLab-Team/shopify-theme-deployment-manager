@@ -62,9 +62,6 @@ jobs:
             npm run build:production
             npm run optimize
           build_cwd: .  # Working directory for build (default: .)
-          build_theme_check: true  # Run Theme Check after build (default: false)
-          build_theme_check_auto_correct: false  # Auto-fix issues (default: false)
-          build_theme_check_fail_on_error: true  # Fail on errors (default: false)
           
           # JSON Pull Configuration
           json_pull_globs: |  # Files to pull from live theme (default shown)
