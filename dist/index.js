@@ -39112,37 +39112,55 @@ async function fetchFromRemote(remote = 'origin') {
  */
 async function createOrCheckoutBranch(branch, baseBranch = 'main') {
   try {
-    // First, check if the branch exists on remote
+    core.info(`Checking for branch: ${branch}`);
+
+    // First, check if the branch exists on remote using a more robust method
     let remoteExists = false;
-    let output = '';
+
     try {
-      await exec.exec('git', ['ls-remote', '--heads', 'origin', branch], {
+      const result = await exec.getExecOutput('git', ['ls-remote', '--heads', 'origin', branch], {
         silent: true,
         ignoreReturnCode: true,
-        listeners: {
-          stdout: (data) => {
-            output += data.toString();
-          },
-        },
       });
-      // Check if the output contains the branch name
-      if (output.trim() && output.includes(branch)) {
+
+      // Check if output contains a ref for this exact branch
+      // Format: <sha> refs/heads/<branch>
+      if (result.stdout && result.stdout.includes(`refs/heads/${branch}`)) {
         remoteExists = true;
+        core.info(`Found remote branch: origin/${branch}`);
+      } else {
+        core.info(`Remote branch does not exist: origin/${branch}`);
       }
-    } catch {
-      // Remote check failed, assume doesn't exist
+    } catch (error) {
+      core.debug(`Remote check failed: ${error.message}`);
       remoteExists = false;
     }
 
     if (remoteExists) {
       // Fetch and checkout the remote branch
       try {
-        await exec.exec('git', ['fetch', 'origin', branch]);
+        core.info(`Fetching remote branch: origin/${branch}`);
+        await exec.exec('git', [
+          'fetch',
+          'origin',
+          `+refs/heads/${branch}:refs/remotes/origin/${branch}`,
+        ]);
+
+        core.info(`Checking out branch: ${branch}`);
         await exec.exec('git', ['checkout', '-B', branch, `origin/${branch}`]);
-        core.info(`Checked out existing remote branch: ${branch}`);
+
+        // Pull latest changes
+        try {
+          await exec.exec('git', ['pull', 'origin', branch, '--rebase=false']);
+        } catch (pullError) {
+          core.warning(`Could not pull latest changes: ${pullError.message}`);
+        }
+
+        core.info(`✅ Successfully checked out existing remote branch: ${branch}`);
         return;
       } catch (error) {
-        core.warning(`Failed to fetch remote branch ${branch}, will create new: ${error.message}`);
+        core.warning(`Failed to fetch/checkout remote branch ${branch}: ${error.message}`);
+        core.info(`Will create a new branch instead`);
         // Continue to create new branch
       }
     }

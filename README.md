@@ -224,6 +224,34 @@ Enable detailed logs:
 
 We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
+## 🔧 Troubleshooting
+
+### Sync-Live Mode Branch Issues
+
+**Problem**: `fatal: couldn't find remote ref remote_changes`
+
+**Cause**: Custom shell scripts in your workflow trying to manage branches before the action runs.
+
+**Solution**: Remove ALL custom git commands from your workflow. The action handles branch creation/management internally. See `/examples/sync-live-correct.yml` for the correct setup.
+
+**❌ What NOT to do**:
+```yaml
+# Don't add custom scripts to manage branches
+- run: |
+    if git ls-remote --heads origin remote_changes; then
+      git fetch origin remote_changes
+      git checkout remote_changes
+    fi
+```
+
+**✅ What to do**:
+```yaml
+# Let the action handle everything
+- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+  with:
+    mode: sync-live
+```
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
