@@ -308,6 +308,31 @@ The action provides these outputs for use in subsequent workflow steps:
 - **Use Case**: Can be used with GitHub Releases or artifact storage
 - **Note**: Only available in production mode when versioning is enabled
 
+### `synced`
+- **Description**: Whether sync was performed (sync-live mode)
+- **Format**: Boolean string (`'true'` or `'false'`)
+- **Note**: Only available in sync-live mode
+
+### `files_count`
+- **Description**: Number of files synced (sync-live mode)
+- **Format**: Numeric string (e.g., `'42'`)
+- **Note**: Only available in sync-live mode
+
+### `branch`
+- **Description**: Branch used for sync (sync-live mode)
+- **Format**: Branch name (e.g., `remote_changes`)
+- **Note**: Only available in sync-live mode
+
+### `pull_request_url`
+- **Description**: URL of created/updated pull request (sync-live mode with PR)
+- **Format**: GitHub PR URL
+- **Note**: Only available in sync-live mode when `sync_type` is `pr`
+
+### `deployment_time`
+- **Description**: Time taken for deployment in seconds
+- **Format**: Numeric string (e.g., `'45'`)
+- **Note**: Available in all modes
+
 ## Configuration Precedence
 
 When the same setting can be configured multiple ways, this precedence applies:
