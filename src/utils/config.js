@@ -78,7 +78,7 @@ function getConfig() {
     json: {
       pullGlobs: parseMultilineInput(
         getInput('json_pull_globs') ||
-          'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
+          'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
       ),
       syncOnStaging: parseBoolean(getSyncOnStagingValue(getInput)),
     },
@@ -115,7 +115,7 @@ function getConfig() {
       onlyGlobs: parseMultilineInput(
         getInput('sync_only_globs') ||
           (getInput('sync_files') === 'json'
-            ? 'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
+            ? 'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
             : '')
       ),
       branch: getInput('sync_branch') || 'remote_changes',

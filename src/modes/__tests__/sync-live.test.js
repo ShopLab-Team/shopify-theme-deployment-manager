@@ -230,9 +230,10 @@ describe('sync-live', () => {
         '123456789',
         [
           'templates/*.json',
-          'templates/customers/*.json',
+          'templates/**/*.json',
           'sections/*.json',
           'snippets/*.json',
+          'blocks/*.json',
           'locales/*.json',
           'config/settings_data.json',
         ],

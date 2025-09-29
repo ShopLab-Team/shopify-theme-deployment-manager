@@ -37614,9 +37614,10 @@ async function productionDeploy(config) {
 
       const ignorePatterns = [
         'templates/*.json',
-        'templates/customers/*.json',
+        'templates/**/*.json',
         'sections/*.json',
         'snippets/*.json',
+        'blocks/*.json',
         'config/settings_data.json',
         'locales/*.json',
       ];
@@ -38086,9 +38087,10 @@ async function syncLive(config) {
       // JSON mode: sync only JSON files
       syncGlobs = [
         'templates/*.json',
-        'templates/customers/*.json',
+        'templates/**/*.json',
         'sections/*.json',
         'snippets/*.json',
+        'blocks/*.json',
         'locales/*.json',
         'config/settings_data.json',
       ];
@@ -38842,7 +38844,7 @@ function getConfig() {
     json: {
       pullGlobs: parseMultilineInput(
         getInput('json_pull_globs') ||
-          'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
+          'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
       ),
       syncOnStaging: parseBoolean(getSyncOnStagingValue(getInput)),
     },
@@ -38879,7 +38881,7 @@ function getConfig() {
       onlyGlobs: parseMultilineInput(
         getInput('sync_only_globs') ||
           (getInput('sync_files') === 'json'
-            ? 'templates/*.json\ntemplates/customers/*.json\nsections/*.json\nsnippets/*.json\nlocales/*.json\nconfig/settings_data.json'
+            ? 'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
             : '')
       ),
       branch: getInput('sync_branch') || 'remote_changes',
