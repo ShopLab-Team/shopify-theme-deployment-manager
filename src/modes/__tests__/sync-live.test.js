@@ -36,6 +36,7 @@ describe('sync-live', () => {
         sync: {
           files: 'custom',
           onlyGlobs: ['templates/*.json', 'locales/*.json'],
+          excludePattern: [],
           branch: 'remote_changes',
           commitMessage: 'chore(sync): import live JSON changes',
           type: 'pr',
@@ -96,7 +97,8 @@ describe('sync-live', () => {
         'test-store',
         '123456789',
         ['templates/*.json', 'locales/*.json'],
-        '.'
+        '.',
+        []
       );
 
       expect(git.createOrCheckoutBranch).toHaveBeenCalledWith('remote_changes', 'main');
@@ -197,6 +199,7 @@ describe('sync-live', () => {
     it('should sync all files when files is all', async () => {
       config.sync.files = 'all';
       config.sync.onlyGlobs = [];
+      config.sync.excludePattern = [];
       config.sync.commitMessage = 'chore(sync): import live theme changes';
 
       const result = await syncLive(config);
@@ -207,7 +210,8 @@ describe('sync-live', () => {
         'test-store',
         '123456789',
         [], // Empty array means sync all files
-        '.'
+        '.',
+        []
       );
 
       expect(result).toMatchObject({
@@ -237,7 +241,8 @@ describe('sync-live', () => {
           'locales/*.json',
           'config/settings_data.json',
         ],
-        '.'
+        '.',
+        []
       );
 
       expect(result).toMatchObject({
@@ -292,7 +297,8 @@ describe('sync-live', () => {
           'assets/*.js',
           '!assets/bundle.min.js',
         ],
-        '.'
+        '.',
+        []
       );
 
       expect(result).toMatchObject({
@@ -306,6 +312,65 @@ describe('sync-live', () => {
       expect(core.info).toHaveBeenCalledWith(
         '  Exclude: assets/tailwind-input.css, assets/compiled.css, assets/bundle.min.js'
       );
+    });
+
+    it('should handle sync_exclude_pattern with sync_files: all', async () => {
+      config.sync.files = 'all';
+      config.sync.onlyGlobs = [];
+      config.sync.excludePattern = [
+        'assets/tailwind-input.css',
+        'assets/compiled.css',
+        'assets/*.min.js',
+      ];
+
+      const result = await syncLive(config);
+
+      expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456789',
+        [], // Empty array means sync all files
+        '.',
+        ['assets/tailwind-input.css', 'assets/compiled.css', 'assets/*.min.js']
+      );
+
+      expect(result).toMatchObject({
+        mode: 'sync-live',
+        synced: true,
+      });
+
+      // Verify logging shows all files with exclusions
+      expect(core.info).toHaveBeenCalledWith(
+        'Files: All - Syncing all theme files with exclusions'
+      );
+      expect(core.info).toHaveBeenCalledWith(
+        '  Exclude: assets/tailwind-input.css, assets/compiled.css, assets/*.min.js'
+      );
+    });
+
+    it('should handle sync_files: all without exclusions', async () => {
+      config.sync.files = 'all';
+      config.sync.onlyGlobs = [];
+      config.sync.excludePattern = [];
+
+      const result = await syncLive(config);
+
+      expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456789',
+        [], // Empty array means sync all files
+        '.',
+        [] // No exclusions
+      );
+
+      expect(result).toMatchObject({
+        mode: 'sync-live',
+        synced: true,
+      });
+
+      // Verify logging shows all files without exclusions
+      expect(core.info).toHaveBeenCalledWith('Files: All - Syncing all theme files');
     });
   });
 });

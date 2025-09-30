@@ -118,6 +118,7 @@ function getConfig() {
             ? 'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
             : '')
       ),
+      excludePattern: parseMultilineInput(getInput('sync_exclude_pattern')),
       branch: getInput('sync_branch') || 'remote_changes',
       targetBranch: getInput('sync_target_branch') || 'staging',
       commitMessage:

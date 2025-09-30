@@ -38083,6 +38083,8 @@ async function syncLive(config) {
 
     // Determine what files to sync based on files setting
     let syncGlobs = [];
+    let ignorePatterns = [];
+
     if (config.sync.files === 'json') {
       // JSON mode: sync only JSON files
       syncGlobs = [
@@ -38113,7 +38115,15 @@ async function syncLive(config) {
     } else {
       // All mode: sync everything (pass empty array to pull all files)
       syncGlobs = [];
-      core.info('Files: All - Syncing all theme files');
+
+      // Check for exclude patterns
+      if (config.sync.excludePattern && config.sync.excludePattern.length > 0) {
+        ignorePatterns = config.sync.excludePattern;
+        core.info('Files: All - Syncing all theme files with exclusions');
+        core.info(`  Exclude: ${ignorePatterns.join(', ')}`);
+      } else {
+        core.info('Files: All - Syncing all theme files');
+      }
     }
 
     await pullThemeFiles(
@@ -38121,7 +38131,8 @@ async function syncLive(config) {
       config.store,
       liveTheme.id.toString(),
       syncGlobs,
-      '.'
+      '.',
+      ignorePatterns
     );
     core.info('Files pulled from live theme');
     core.endGroup();
@@ -38895,6 +38906,7 @@ function getConfig() {
             ? 'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
             : '')
       ),
+      excludePattern: parseMultilineInput(getInput('sync_exclude_pattern')),
       branch: getInput('sync_branch') || 'remote_changes',
       targetBranch: getInput('sync_target_branch') || 'staging',
       commitMessage:

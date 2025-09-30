@@ -130,7 +130,12 @@ inputs:
     default: 'all'
   
   sync_only_globs:
-    description: 'Glob patterns for custom sync mode (newline-separated). Only used when sync_files is "custom"'
+    description: 'Glob patterns for custom sync mode (newline-separated). Only used when sync_files is "custom". Supports negative patterns with ! prefix'
+    required: false
+    default: ''
+  
+  sync_exclude_pattern:
+    description: 'Files to exclude when sync_files is "all" (newline-separated). Example: assets/compiled.css'
     required: false
     default: ''
   
@@ -245,6 +250,7 @@ runs:
         INPUT_VERSIONING_FORMAT: ${{ inputs.versioning_format }}
         INPUT_SYNC_FILES: ${{ inputs.sync_files }}
         INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
+        INPUT_SYNC_EXCLUDE_PATTERN: ${{ inputs.sync_exclude_pattern }}
         INPUT_SYNC_BRANCH: ${{ inputs.sync_branch }}
         INPUT_SYNC_TARGET_BRANCH: ${{ inputs.sync_target_branch }}
         INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}

@@ -218,6 +218,20 @@ This document provides a comprehensive reference for all configuration options a
   ```
 - **Use Case**: Sync specific files while excluding compiled or generated files (e.g., `!assets/compiled.css`)
 
+### `sync_exclude_pattern`
+- **Description**: Files to exclude when `sync_files: all` (syncing all theme files)
+- **Default**: Empty
+- **Format**: Newline-separated file patterns
+- **Example**:
+  ```yaml
+  sync_exclude_pattern: |
+    assets/tailwind-input.css
+    assets/compiled.css
+    assets/*.min.js
+  ```
+- **Use Case**: Sync all theme files except specific compiled or generated files
+- **Note**: Only applies when `sync_files: all`. For custom sync patterns, use negative patterns in `sync_only_globs` instead
+
 ### `sync_branch`
 - **Description**: Branch name for committing synced changes
 - **Default**: `remote_changes`
