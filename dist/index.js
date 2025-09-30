@@ -38047,51 +38047,75 @@ async function syncLive(config) {
     }
 
     core.startGroup('📝 Creating .shopifyignore to include only theme directories');
-    // Use allowlist approach: ignore everything, then explicitly allow theme directories
-    const shopifyIgnoreContent = [
-      '# Ignore everything by default',
-      '*',
-      '.*',
-      '',
-      '# Allow only Shopify theme directories and files',
-      '!assets/',
-      '!assets/**',
-      '!config/',
-      '!config/**',
-      '!layout/',
-      '!layout/**',
-      '!locales/',
-      '!locales/**',
-      '!sections/',
-      '!sections/**',
-      '!snippets/',
-      '!snippets/**',
-      '!templates/',
-      '!templates/**',
-      '!templates/customers/',
-      '!templates/customers/**',
-      '!templates/metaobject/',
-      '!templates/metaobject/**',
-      '!translation.yml',
-    ];
 
-    // Add exclude patterns for sync_files: all mode
-    // These patterns need to come AFTER the allow patterns to override them
+    // For sync_files: all with exclusions, DON'T use the ** glob patterns
+    // because they prevent exclusions from working
     if (
       config.sync.files === 'all' &&
       config.sync.excludePattern &&
       config.sync.excludePattern.length > 0
     ) {
-      shopifyIgnoreContent.push('');
-      shopifyIgnoreContent.push('# Exclude specific files (from sync_exclude_pattern)');
+      const shopifyIgnoreContent = [
+        '# Ignore everything by default',
+        '*',
+        '.*',
+        '',
+        '# Allow only Shopify theme directories (without ** to allow exclusions)',
+        '!assets/',
+        '!config/',
+        '!layout/',
+        '!locales/',
+        '!sections/',
+        '!snippets/',
+        '!templates/',
+        '!templates/customers/',
+        '!templates/metaobject/',
+        '!translation.yml',
+        '',
+        '# Exclude specific files (from sync_exclude_pattern)',
+      ];
+
       for (const pattern of config.sync.excludePattern) {
         shopifyIgnoreContent.push(pattern);
       }
-      core.info(`Added ${config.sync.excludePattern.length} exclusion patterns to .shopifyignore`);
+
+      await fs.writeFile('.shopifyignore', shopifyIgnoreContent.join('\n'));
+      core.info(
+        `Created .shopifyignore with ${config.sync.excludePattern.length} exclusion patterns`
+      );
+    } else {
+      // Use allowlist approach with ** patterns when no exclusions
+      const shopifyIgnoreContent = [
+        '# Ignore everything by default',
+        '*',
+        '.*',
+        '',
+        '# Allow only Shopify theme directories and files',
+        '!assets/',
+        '!assets/**',
+        '!config/',
+        '!config/**',
+        '!layout/',
+        '!layout/**',
+        '!locales/',
+        '!locales/**',
+        '!sections/',
+        '!sections/**',
+        '!snippets/',
+        '!snippets/**',
+        '!templates/',
+        '!templates/**',
+        '!templates/customers/',
+        '!templates/customers/**',
+        '!templates/metaobject/',
+        '!templates/metaobject/**',
+        '!translation.yml',
+      ];
+
+      await fs.writeFile('.shopifyignore', shopifyIgnoreContent.join('\n'));
+      core.info('Created .shopifyignore file with theme-only allowlist.');
     }
 
-    await fs.writeFile('.shopifyignore', shopifyIgnoreContent.join('\n'));
-    core.info('Created .shopifyignore file with theme-only allowlist.');
     core.endGroup();
 
     // Step 4: Pull theme files

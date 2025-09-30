@@ -347,7 +347,7 @@ describe('sync-live', () => {
       expect(core.info).toHaveBeenCalledWith(
         '  Exclude: assets/tailwind-input.css, assets/compiled.css, assets/*.min.js'
       );
-      expect(core.info).toHaveBeenCalledWith('Added 3 exclusion patterns to .shopifyignore');
+      expect(core.info).toHaveBeenCalledWith('Created .shopifyignore with 3 exclusion patterns');
     });
 
     it('should handle sync_files: all without exclusions', async () => {
