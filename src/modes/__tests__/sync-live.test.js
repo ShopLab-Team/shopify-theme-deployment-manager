@@ -325,13 +325,14 @@ describe('sync-live', () => {
 
       const result = await syncLive(config);
 
+      // Note: Exclusions are handled via .shopifyignore, not --ignore flags
       expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
         'test-token',
         'test-store',
         '123456789',
         [], // Empty array means sync all files
         '.',
-        ['assets/tailwind-input.css', 'assets/compiled.css', 'assets/*.min.js']
+        [] // Empty - exclusions handled by .shopifyignore
       );
 
       expect(result).toMatchObject({
@@ -346,6 +347,7 @@ describe('sync-live', () => {
       expect(core.info).toHaveBeenCalledWith(
         '  Exclude: assets/tailwind-input.css, assets/compiled.css, assets/*.min.js'
       );
+      expect(core.info).toHaveBeenCalledWith('Added 3 exclusion patterns to .shopifyignore');
     });
 
     it('should handle sync_files: all without exclusions', async () => {

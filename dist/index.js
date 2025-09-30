@@ -38073,8 +38073,24 @@ async function syncLive(config) {
       '!templates/metaobject/',
       '!templates/metaobject/**',
       '!translation.yml',
-    ].join('\n');
-    await fs.writeFile('.shopifyignore', shopifyIgnoreContent);
+    ];
+
+    // Add exclude patterns for sync_files: all mode
+    // These patterns need to come AFTER the allow patterns to override them
+    if (
+      config.sync.files === 'all' &&
+      config.sync.excludePattern &&
+      config.sync.excludePattern.length > 0
+    ) {
+      shopifyIgnoreContent.push('');
+      shopifyIgnoreContent.push('# Exclude specific files (from sync_exclude_pattern)');
+      for (const pattern of config.sync.excludePattern) {
+        shopifyIgnoreContent.push(pattern);
+      }
+      core.info(`Added ${config.sync.excludePattern.length} exclusion patterns to .shopifyignore`);
+    }
+
+    await fs.writeFile('.shopifyignore', shopifyIgnoreContent.join('\n'));
     core.info('Created .shopifyignore file with theme-only allowlist.');
     core.endGroup();
 
@@ -38083,7 +38099,6 @@ async function syncLive(config) {
 
     // Determine what files to sync based on files setting
     let syncGlobs = [];
-    let ignorePatterns = [];
 
     if (config.sync.files === 'json') {
       // JSON mode: sync only JSON files
@@ -38116,23 +38131,24 @@ async function syncLive(config) {
       // All mode: sync everything (pass empty array to pull all files)
       syncGlobs = [];
 
-      // Check for exclude patterns
+      // Check for exclude patterns (these are added to .shopifyignore above)
       if (config.sync.excludePattern && config.sync.excludePattern.length > 0) {
-        ignorePatterns = config.sync.excludePattern;
         core.info('Files: All - Syncing all theme files with exclusions');
-        core.info(`  Exclude: ${ignorePatterns.join(', ')}`);
+        core.info(`  Exclude: ${config.sync.excludePattern.join(', ')}`);
       } else {
         core.info('Files: All - Syncing all theme files');
       }
     }
 
+    // Note: For pull operations, exclusions are handled via .shopifyignore file
+    // The --ignore flag doesn't work reliably for theme pull, only for theme push
     await pullThemeFiles(
       config.secrets.themeToken,
       config.store,
       liveTheme.id.toString(),
       syncGlobs,
       '.',
-      ignorePatterns
+      [] // Don't pass ignore patterns for pull - they don't work
     );
     core.info('Files pulled from live theme');
     core.endGroup();
