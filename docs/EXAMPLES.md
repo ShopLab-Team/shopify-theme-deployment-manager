@@ -158,6 +158,40 @@ These are **optional** additions you can make in your workflow:
     sync_files: json  # Only sync JSON files
 ```
 
+### Custom Sync With Exclusions
+
+Sync specific files while excluding compiled or generated files:
+
+```yaml
+- uses: ShopLab-Team/shopify-theme-deployment-manager@v1
+  with:
+    mode: sync-live
+    sync_type: pr
+    sync_files: custom
+    sync_only_globs: |
+      templates/*.json
+      templates/customers/*.json
+      locales/*.json
+      config/*.json
+      sections/*.json
+      sections/*.liquid
+      snippets/*.liquid
+      layout/*.liquid
+      assets/*.css
+      !assets/tailwind-input.css
+      !assets/compiled.css
+      assets/*.js
+      !assets/bundle.min.js
+  env:
+    SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+    SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Note**: Patterns starting with `!` are treated as exclusions. In this example:
+- All CSS files are synced EXCEPT `tailwind-input.css` and `compiled.css`
+- All JS files are synced EXCEPT `bundle.min.js`
+
 ### Deploy With Slack Notifications
 
 ```yaml

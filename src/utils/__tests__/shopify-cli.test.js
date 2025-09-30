@@ -280,6 +280,102 @@ describe('shopify-cli', () => {
         expect.any(Object)
       );
     });
+
+    it('should handle negative patterns (exclusions)', async () => {
+      exec.exec.mockResolvedValue(0);
+      const globs = [
+        'assets/*.css',
+        '!assets/tailwind-input.css',
+        '!assets/compiled.css',
+        'assets/*.js',
+        '!assets/bundle.min.js',
+      ];
+
+      await pullThemeFiles('test-token', 'test-store', '123456789', globs, '.');
+
+      expect(exec.exec).toHaveBeenCalledWith(
+        'shopify',
+        [
+          'theme',
+          'pull',
+          '--store',
+          'test-store.myshopify.com',
+          '--theme',
+          '123456789',
+          '--path',
+          '.',
+          '--only',
+          'assets/*.css',
+          '--only',
+          'assets/*.js',
+          '--ignore',
+          'assets/tailwind-input.css',
+          '--ignore',
+          'assets/compiled.css',
+          '--ignore',
+          'assets/bundle.min.js',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should support additional ignore patterns parameter', async () => {
+      exec.exec.mockResolvedValue(0);
+      const globs = ['templates/*.json'];
+      const ignorePatterns = ['*.map', 'node_modules/**'];
+
+      await pullThemeFiles('test-token', 'test-store', '123456789', globs, '.', ignorePatterns);
+
+      expect(exec.exec).toHaveBeenCalledWith(
+        'shopify',
+        [
+          'theme',
+          'pull',
+          '--store',
+          'test-store.myshopify.com',
+          '--theme',
+          '123456789',
+          '--path',
+          '.',
+          '--only',
+          'templates/*.json',
+          '--ignore',
+          '*.map',
+          '--ignore',
+          'node_modules/**',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should combine negative patterns from globs with additional ignore patterns', async () => {
+      exec.exec.mockResolvedValue(0);
+      const globs = ['assets/*.css', '!assets/compiled.css'];
+      const ignorePatterns = ['*.map'];
+
+      await pullThemeFiles('test-token', 'test-store', '123456789', globs, '.', ignorePatterns);
+
+      expect(exec.exec).toHaveBeenCalledWith(
+        'shopify',
+        [
+          'theme',
+          'pull',
+          '--store',
+          'test-store.myshopify.com',
+          '--theme',
+          '123456789',
+          '--path',
+          '.',
+          '--only',
+          'assets/*.css',
+          '--ignore',
+          'assets/compiled.css',
+          '--ignore',
+          '*.map',
+        ],
+        expect.any(Object)
+      );
+    });
   });
 
   describe('pushThemeFiles', () => {

@@ -268,5 +268,44 @@ describe('sync-live', () => {
 
       await expect(syncLive(config)).rejects.toThrow('Failed to create PR');
     });
+
+    it('should handle negative patterns in custom sync globs', async () => {
+      config.sync.files = 'custom';
+      config.sync.onlyGlobs = [
+        'assets/*.css',
+        '!assets/tailwind-input.css',
+        '!assets/compiled.css',
+        'assets/*.js',
+        '!assets/bundle.min.js',
+      ];
+
+      const result = await syncLive(config);
+
+      expect(shopifyCli.pullThemeFiles).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456789',
+        [
+          'assets/*.css',
+          '!assets/tailwind-input.css',
+          '!assets/compiled.css',
+          'assets/*.js',
+          '!assets/bundle.min.js',
+        ],
+        '.'
+      );
+
+      expect(result).toMatchObject({
+        mode: 'sync-live',
+        synced: true,
+      });
+
+      // Verify logging includes both include and exclude patterns
+      expect(core.info).toHaveBeenCalledWith('Files: Custom - Using patterns');
+      expect(core.info).toHaveBeenCalledWith('  Include: assets/*.css, assets/*.js');
+      expect(core.info).toHaveBeenCalledWith(
+        '  Exclude: assets/tailwind-input.css, assets/compiled.css, assets/bundle.min.js'
+      );
+    });
   });
 });

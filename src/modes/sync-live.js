@@ -125,9 +125,20 @@ async function syncLive(config) {
       ];
       core.info('Files: JSON - Syncing only JSON files');
     } else if (config.sync.files === 'custom' && config.sync.onlyGlobs.length > 0) {
-      // Custom mode: use provided globs
+      // Custom mode: use provided globs (supports negative patterns with ! prefix)
       syncGlobs = config.sync.onlyGlobs;
-      core.info(`Files: Custom - Using patterns: ${syncGlobs.join(', ')}`);
+
+      // Separate patterns for better logging
+      const includePatterns = syncGlobs.filter((g) => !g.startsWith('!'));
+      const excludePatterns = syncGlobs.filter((g) => g.startsWith('!')).map((g) => g.substring(1));
+
+      core.info('Files: Custom - Using patterns');
+      if (includePatterns.length > 0) {
+        core.info(`  Include: ${includePatterns.join(', ')}`);
+      }
+      if (excludePatterns.length > 0) {
+        core.info(`  Exclude: ${excludePatterns.join(', ')}`);
+      }
     } else {
       // All mode: sync everything (pass empty array to pull all files)
       syncGlobs = [];

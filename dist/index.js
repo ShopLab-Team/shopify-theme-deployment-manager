@@ -38096,9 +38096,20 @@ async function syncLive(config) {
       ];
       core.info('Files: JSON - Syncing only JSON files');
     } else if (config.sync.files === 'custom' && config.sync.onlyGlobs.length > 0) {
-      // Custom mode: use provided globs
+      // Custom mode: use provided globs (supports negative patterns with ! prefix)
       syncGlobs = config.sync.onlyGlobs;
-      core.info(`Files: Custom - Using patterns: ${syncGlobs.join(', ')}`);
+
+      // Separate patterns for better logging
+      const includePatterns = syncGlobs.filter((g) => !g.startsWith('!'));
+      const excludePatterns = syncGlobs.filter((g) => g.startsWith('!')).map((g) => g.substring(1));
+
+      core.info('Files: Custom - Using patterns');
+      if (includePatterns.length > 0) {
+        core.info(`  Include: ${includePatterns.join(', ')}`);
+      }
+      if (excludePatterns.length > 0) {
+        core.info(`  Exclude: ${excludePatterns.join(', ')}`);
+      }
     } else {
       // All mode: sync everything (pass empty array to pull all files)
       syncGlobs = [];
@@ -39902,19 +39913,49 @@ async function ensureThemeExists(token, store, themeId) {
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
- * @param {string[]} globs - File globs to pull
+ * @param {string[]} globs - File globs to pull (can include negative patterns with ! prefix)
  * @param {string} targetDir - Target directory
+ * @param {string[]} ignorePatterns - Additional patterns to ignore
  * @returns {Promise<void>}
  */
-async function pullThemeFiles(token, store, themeId, globs = [], targetDir = '.') {
+async function pullThemeFiles(
+  token,
+  store,
+  themeId,
+  globs = [],
+  targetDir = '.',
+  ignorePatterns = []
+) {
   const storeDomain = normalizeStore(store);
 
   const args = ['theme', 'pull', '--store', storeDomain, '--theme', themeId, '--path', targetDir];
 
-  // Add --only flags for specific globs
-  if (globs.length > 0) {
-    for (const glob of globs) {
+  // Separate positive patterns (include) from negative patterns (exclude)
+  const includePatterns = [];
+  const excludePatterns = [];
+
+  for (const glob of globs) {
+    if (glob.startsWith('!')) {
+      // Negative pattern - exclude this file/pattern
+      excludePatterns.push(glob.substring(1)); // Remove the ! prefix
+    } else {
+      // Positive pattern - include this file/pattern
+      includePatterns.push(glob);
+    }
+  }
+
+  // Add --only flags for specific globs (positive patterns)
+  if (includePatterns.length > 0) {
+    for (const glob of includePatterns) {
       args.push('--only', glob);
+    }
+  }
+
+  // Add --ignore flags for excluded patterns
+  const allIgnorePatterns = [...excludePatterns, ...ignorePatterns];
+  if (allIgnorePatterns.length > 0) {
+    for (const pattern of allIgnorePatterns) {
+      args.push('--ignore', pattern);
     }
   }
 
@@ -39928,8 +39969,11 @@ async function pullThemeFiles(token, store, themeId, globs = [], targetDir = '.'
 
   try {
     core.info(`Pulling theme files from theme ${themeId}...`);
-    if (globs.length > 0) {
-      core.info(`Globs: ${globs.join(', ')}`);
+    if (includePatterns.length > 0) {
+      core.info(`Include patterns: ${includePatterns.join(', ')}`);
+    }
+    if (allIgnorePatterns.length > 0) {
+      core.info(`Exclude patterns: ${allIgnorePatterns.join(', ')}`);
     }
 
     await withRetry(

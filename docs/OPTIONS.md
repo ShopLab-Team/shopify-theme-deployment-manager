@@ -205,13 +205,18 @@ This document provides a comprehensive reference for all configuration options a
 - **Description**: Custom glob patterns for sync (only used when `sync_files: custom`)
 - **Default**: Empty
 - **Format**: Newline-separated glob patterns
+- **Negative Patterns**: Patterns starting with `!` are treated as exclusions
 - **Example**:
   ```yaml
   sync_only_globs: |
     config/settings_data.json
     templates/*.json
     sections/*.liquid
+    assets/*.css
+    !assets/tailwind-input.css
+    assets/*.js
   ```
+- **Use Case**: Sync specific files while excluding compiled or generated files (e.g., `!assets/compiled.css`)
 
 ### `sync_branch`
 - **Description**: Branch name for committing synced changes
