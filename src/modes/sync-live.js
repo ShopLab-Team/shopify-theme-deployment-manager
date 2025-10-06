@@ -227,9 +227,12 @@ async function syncLive(config) {
       };
     }
 
-    // Get list of changed files
-    const changedFiles = await getChangedFiles(originalBranch);
-    core.info(`Found ${changedFiles.length} changed files`);
+    // Get target branch for comparison (used for PR base and change comparison)
+    const targetBranch = config.sync.targetBranch || 'staging';
+
+    // Get list of changed files compared to target branch
+    const changedFiles = await getChangedFiles(targetBranch);
+    core.info(`Found ${changedFiles.length} changed files (compared to ${targetBranch})`);
     changedFiles.forEach((file) => core.info(`  - ${file}`));
     core.endGroup();
 
@@ -247,9 +250,6 @@ async function syncLive(config) {
 
       // Push branch to remote_changes
       await pushToRemoteBranch(config.sync.branch);
-
-      // Use configured target branch for PR (defaults to staging)
-      const targetBranch = config.sync.targetBranch || 'staging';
 
       // Create or update pull request from remote_changes to target branch
       const pr = await createPullRequest({

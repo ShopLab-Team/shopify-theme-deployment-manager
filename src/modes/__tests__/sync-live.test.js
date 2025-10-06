@@ -38,6 +38,7 @@ describe('sync-live', () => {
           onlyGlobs: ['templates/*.json', 'locales/*.json'],
           excludePattern: [],
           branch: 'remote_changes',
+          targetBranch: 'staging',
           commitMessage: 'chore(sync): import live JSON changes',
           type: 'pr',
         },
@@ -102,6 +103,7 @@ describe('sync-live', () => {
       );
 
       expect(git.createOrCheckoutBranch).toHaveBeenCalledWith('remote_changes', 'main');
+      expect(git.getChangedFiles).toHaveBeenCalledWith('staging'); // Should compare against target branch
       expect(exec.exec).toHaveBeenCalledWith('git', ['add', '.']);
       expect(exec.exec).toHaveBeenCalledWith('git', [
         'commit',
@@ -272,6 +274,19 @@ describe('sync-live', () => {
       git.createPullRequest.mockRejectedValue(error);
 
       await expect(syncLive(config)).rejects.toThrow('Failed to create PR');
+    });
+
+    it('should use custom target branch for comparison', async () => {
+      config.sync.targetBranch = 'develop';
+
+      await syncLive(config);
+
+      expect(git.getChangedFiles).toHaveBeenCalledWith('develop');
+      expect(git.createPullRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseBranch: 'develop',
+        })
+      );
     });
 
     it('should handle negative patterns in custom sync globs', async () => {
