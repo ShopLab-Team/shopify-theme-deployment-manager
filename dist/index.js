@@ -40849,15 +40849,19 @@ function parseVersion(version) {
  * @param {number} major - Major version
  * @param {number} minor - Minor version (0-99)
  * @param {number} patch - Patch version (0-99)
- * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
+ * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
  * @returns {string} Formatted version string
  */
 function formatVersion(major, minor, patch, format = 'X.XX.XX') {
   if (format === 'X.X.X') {
-    // Single digit format (no padding)
+    // No padding format
     return `${major}.${minor}.${patch}`;
+  } else if (format === 'X.X.XX') {
+    // Major and minor no padding, patch with 2-digit padding
+    const patchStr = String(patch).padStart(2, '0');
+    return `${major}.${minor}.${patchStr}`;
   } else {
-    // Double digit format with padding (X.XX.XX)
+    // Full padding format (X.XX.XX) - default
     const minorStr = String(minor).padStart(2, '0');
     const patchStr = String(patch).padStart(2, '0');
     return `${major}.${minorStr}.${patchStr}`;
@@ -40867,12 +40871,19 @@ function formatVersion(major, minor, patch, format = 'X.XX.XX') {
 /**
  * Auto-increment version with rollover at 100
  * @param {string} currentVersion - Current version string
- * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
+ * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
  * @returns {string} New version
  */
 function bumpVersion(currentVersion, format = 'X.XX.XX') {
   if (!currentVersion) {
-    return format === 'X.X.X' ? '0.0.1' : '0.00.01';
+    // Return initial version based on format
+    if (format === 'X.X.X') {
+      return '0.0.1';
+    } else if (format === 'X.X.XX') {
+      return '0.0.01';
+    } else {
+      return '0.00.01';
+    }
   }
 
   const { major, minor, patch } = parseVersion(currentVersion);
@@ -40892,7 +40903,13 @@ function bumpVersion(currentVersion, format = 'X.XX.XX') {
 
       if (newMajor >= 100) {
         core.warning('Version has reached maximum (99.99.99), resetting to 0.0.1');
-        return format === 'X.X.X' ? '0.0.1' : '0.00.01';
+        if (format === 'X.X.X') {
+          return '0.0.1';
+        } else if (format === 'X.X.XX') {
+          return '0.0.01';
+        } else {
+          return '0.00.01';
+        }
       }
     }
   }
@@ -40905,7 +40922,7 @@ function bumpVersion(currentVersion, format = 'X.XX.XX') {
  * @param {string} token - Theme access token
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
- * @param {string} format - Version format ('X.X.X' or 'X.XX.XX')
+ * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
  * @returns {Promise<Object>} Version result
  */
 async function renameThemeWithVersion(token, store, themeId, format = 'X.XX.XX') {

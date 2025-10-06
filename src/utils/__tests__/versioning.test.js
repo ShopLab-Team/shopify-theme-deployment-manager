@@ -115,9 +115,20 @@ describe('versioning', () => {
 
     it('should return correct initial version based on format', () => {
       expect(bumpVersion(null, 'X.X.X')).toBe('0.0.1');
+      expect(bumpVersion(null, 'X.X.XX')).toBe('0.0.01');
       expect(bumpVersion(null, 'X.XX.XX')).toBe('0.00.01');
       expect(bumpVersion('', 'X.X.X')).toBe('0.0.1');
+      expect(bumpVersion('', 'X.X.XX')).toBe('0.0.01');
       expect(bumpVersion('', 'X.XX.XX')).toBe('0.00.01');
+    });
+
+    it('should support X.X.XX format with patch padding only', () => {
+      expect(bumpVersion('1.2.3', 'X.X.XX')).toBe('1.2.04');
+      expect(bumpVersion('0.0.9', 'X.X.XX')).toBe('0.0.10');
+      expect(bumpVersion('0.0.99', 'X.X.XX')).toBe('0.1.00');
+      expect(bumpVersion('0.99.99', 'X.X.XX')).toBe('1.0.00');
+      expect(bumpVersion('10.5.98', 'X.X.XX')).toBe('10.5.99');
+      expect(bumpVersion('10.5.99', 'X.X.XX')).toBe('10.6.00');
     });
   });
 
@@ -247,6 +258,14 @@ describe('versioning', () => {
       expect(formatVersion(99, 99, 99, 'X.X.X')).toBe('99.99.99');
       expect(formatVersion(1, 0, 10, 'X.X.X')).toBe('1.0.10');
       expect(formatVersion(10, 20, 30, 'X.X.X')).toBe('10.20.30');
+    });
+
+    it('should format version with patch padding only for X.X.XX format', () => {
+      expect(formatVersion(1, 2, 3, 'X.X.XX')).toBe('1.2.03');
+      expect(formatVersion(0, 0, 1, 'X.X.XX')).toBe('0.0.01');
+      expect(formatVersion(10, 99, 88, 'X.X.XX')).toBe('10.99.88');
+      expect(formatVersion(5, 0, 5, 'X.X.XX')).toBe('5.0.05');
+      expect(formatVersion(1, 10, 99, 'X.X.XX')).toBe('1.10.99');
     });
   });
 });
