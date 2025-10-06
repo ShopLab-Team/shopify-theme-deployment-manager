@@ -37629,11 +37629,11 @@ async function productionDeploy(config) {
         force: true,
       });
 
-      // Phase B: Push only en.default.json
-      core.info('Phase B: Pushing default locale...');
+      // Phase B: Push only en.default.json and en.default.schema.json
+      core.info('Phase B: Pushing default locale and schema...');
 
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        only: ['locales/en.default.json'],
+        only: ['locales/en.default.json', 'locales/en.default.schema.json'],
         nodelete: true,
         allowLive: true, // Always allow live push in production mode
         force: true,
@@ -38133,6 +38133,7 @@ async function syncLive(config) {
         'snippets/*.json',
         'blocks/*.json',
         'locales/*.json',
+        'locales/*.schema.json',
         'config/settings_data.json',
       ];
       core.info('Files: JSON - Syncing only JSON files');
@@ -38906,7 +38907,7 @@ function getConfig() {
     json: {
       pullGlobs: parseMultilineInput(
         getInput('json_pull_globs') ||
-          'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
+          'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nlocales/*.schema.json\nconfig/settings_data.json'
       ),
       syncOnStaging: parseBoolean(getSyncOnStagingValue(getInput)),
     },
@@ -38943,7 +38944,7 @@ function getConfig() {
       onlyGlobs: parseMultilineInput(
         getInput('sync_only_globs') ||
           (getInput('sync_files') === 'json'
-            ? 'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nconfig/settings_data.json'
+            ? 'templates/*.json\ntemplates/**/*.json\nsections/*.json\nsnippets/*.json\nblocks/*.json\nlocales/*.json\nlocales/*.schema.json\nconfig/settings_data.json'
             : '')
       ),
       excludePattern: parseMultilineInput(getInput('sync_exclude_pattern')),

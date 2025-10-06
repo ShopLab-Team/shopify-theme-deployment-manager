@@ -162,6 +162,7 @@ async function syncLive(config) {
         'snippets/*.json',
         'blocks/*.json',
         'locales/*.json',
+        'locales/*.schema.json',
         'config/settings_data.json',
       ];
       core.info('Files: JSON - Syncing only JSON files');

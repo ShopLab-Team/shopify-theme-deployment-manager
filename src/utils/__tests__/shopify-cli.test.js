@@ -421,7 +421,7 @@ describe('shopify-cli', () => {
     it('should push with only patterns and nodelete', async () => {
       exec.exec.mockResolvedValue(0);
       const options = {
-        only: ['locales/en.default.json'],
+        only: ['locales/en.default.json', 'locales/en.default.schema.json'],
         nodelete: true,
         allowLive: true,
       };
@@ -439,6 +439,8 @@ describe('shopify-cli', () => {
           '123456789',
           '--only',
           'locales/en.default.json',
+          '--only',
+          'locales/en.default.schema.json',
           '--nodelete',
           '--allow-live',
           '--json',

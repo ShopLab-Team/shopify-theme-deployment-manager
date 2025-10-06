@@ -150,11 +150,11 @@ async function productionDeploy(config) {
         force: true,
       });
 
-      // Phase B: Push only en.default.json
-      core.info('Phase B: Pushing default locale...');
+      // Phase B: Push only en.default.json and en.default.schema.json
+      core.info('Phase B: Pushing default locale and schema...');
 
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        only: ['locales/en.default.json'],
+        only: ['locales/en.default.json', 'locales/en.default.schema.json'],
         nodelete: true,
         allowLive: true, // Always allow live push in production mode
         force: true,

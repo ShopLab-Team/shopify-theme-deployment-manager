@@ -248,14 +248,14 @@ describe('production', () => {
         })
       );
 
-      // Second call should only push locales/en.default.json
+      // Second call should only push locales/en.default.json and locales/en.default.schema.json
       expect(pushThemeFiles).toHaveBeenNthCalledWith(
         2,
         expect.any(String),
         expect.any(String),
         expect.any(String),
         expect.objectContaining({
-          only: ['locales/en.default.json'],
+          only: ['locales/en.default.json', 'locales/en.default.schema.json'],
         })
       );
     });
