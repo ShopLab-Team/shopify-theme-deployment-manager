@@ -10,6 +10,7 @@ const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../utils/
 const { normalizeStore } = require('../utils/validators');
 const { buildAssets } = require('../utils/build');
 const { sendSlackNotification } = require('../utils/slack');
+const { sendMSTeamsNotification } = require('../utils/msteams');
 const { renameThemeWithVersion } = require('../utils/versioning');
 
 /**
@@ -242,11 +243,26 @@ async function productionDeploy(config) {
       packagePath,
     };
 
-    // Step 7: Send Slack notification if configured
+    // Step 7: Send notifications if configured
     if (config.secrets.slackWebhookUrl) {
       core.startGroup('🔔 Sending Slack notification');
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'production',
+        success: true,
+        themeName: productionTheme.name,
+        themeId: productionTheme.id.toString(),
+        previewUrl: result.previewUrl,
+        version: newVersion,
+        deploymentTime,
+      });
+      core.endGroup();
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      core.startGroup('🔔 Sending MS Teams notification');
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'production',
         success: true,
         themeName: productionTheme.name,
@@ -263,10 +279,19 @@ async function productionDeploy(config) {
   } catch (error) {
     core.error(`Production deployment failed: ${error.message}`);
 
-    // Send failure notification if configured
+    // Send failure notifications if configured
     if (config.secrets.slackWebhookUrl) {
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'production',
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'production',
         success: false,
         error: error.message,

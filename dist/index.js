@@ -37489,6 +37489,7 @@ const { createBackup, cleanupBackups, ensureThemeCapacity } = __nccwpck_require_
 const { normalizeStore } = __nccwpck_require__(6236);
 const { buildAssets } = __nccwpck_require__(8431);
 const { sendSlackNotification } = __nccwpck_require__(1343);
+const { sendMSTeamsNotification } = __nccwpck_require__(2405);
 const { renameThemeWithVersion } = __nccwpck_require__(1363);
 
 /**
@@ -37721,11 +37722,26 @@ async function productionDeploy(config) {
       packagePath,
     };
 
-    // Step 7: Send Slack notification if configured
+    // Step 7: Send notifications if configured
     if (config.secrets.slackWebhookUrl) {
       core.startGroup('🔔 Sending Slack notification');
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'production',
+        success: true,
+        themeName: productionTheme.name,
+        themeId: productionTheme.id.toString(),
+        previewUrl: result.previewUrl,
+        version: newVersion,
+        deploymentTime,
+      });
+      core.endGroup();
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      core.startGroup('🔔 Sending MS Teams notification');
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'production',
         success: true,
         themeName: productionTheme.name,
@@ -37742,10 +37758,19 @@ async function productionDeploy(config) {
   } catch (error) {
     core.error(`Production deployment failed: ${error.message}`);
 
-    // Send failure notification if configured
+    // Send failure notifications if configured
     if (config.secrets.slackWebhookUrl) {
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'production',
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'production',
         success: false,
         error: error.message,
@@ -37775,6 +37800,7 @@ const {
 const { normalizeStore } = __nccwpck_require__(6236);
 const { buildAssets } = __nccwpck_require__(8431);
 const { sendSlackNotification } = __nccwpck_require__(1343);
+const { sendMSTeamsNotification } = __nccwpck_require__(2405);
 
 /**
  * Execute staging deployment
@@ -37920,11 +37946,25 @@ async function stagingDeploy(config) {
       deploymentTime,
     };
 
-    // Step 6: Send Slack notification if configured
+    // Step 6: Send notifications if configured
     if (config.secrets.slackWebhookUrl) {
       core.startGroup('🔔 Sending Slack notification');
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'staging',
+        success: true,
+        themeName: stagingTheme.name,
+        themeId: stagingTheme.id.toString(),
+        previewUrl: result.previewUrl,
+        deploymentTime,
+      });
+      core.endGroup();
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      core.startGroup('🔔 Sending MS Teams notification');
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'staging',
         success: true,
         themeName: stagingTheme.name,
@@ -37947,10 +37987,19 @@ async function stagingDeploy(config) {
   } catch (error) {
     core.error(`Staging deployment failed: ${error.message}`);
 
-    // Send failure notification if configured
+    // Send failure notifications if configured
     if (config.secrets.slackWebhookUrl) {
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'staging',
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'staging',
         success: false,
         error: error.message,
@@ -37974,6 +38023,7 @@ const exec = __nccwpck_require__(5236);
 const { getLiveTheme, pullThemeFiles } = __nccwpck_require__(6206);
 const { normalizeStore } = __nccwpck_require__(6236);
 const { sendSlackNotification } = __nccwpck_require__(1343);
+const { sendMSTeamsNotification } = __nccwpck_require__(2405);
 const {
   configureGitUser,
   createPullRequest,
@@ -38286,11 +38336,26 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
       themeId: liveTheme.id.toString(),
     };
 
-    // Step 8: Send Slack notification if configured
+    // Step 8: Send notifications if configured
     if (config.secrets.slackWebhookUrl) {
       core.startGroup('🔔 Sending Slack notification');
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'sync-live',
+        success: true,
+        themeName: liveTheme.name,
+        themeId: liveTheme.id.toString(),
+        filesCount: changedFiles.length,
+        pullRequestUrl,
+        syncTime,
+      });
+      core.endGroup();
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      core.startGroup('🔔 Sending MS Teams notification');
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'sync-live',
         success: true,
         themeName: liveTheme.name,
@@ -38318,10 +38383,19 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
   } catch (error) {
     core.error(`Live sync failed: ${error.message}`);
 
-    // Send failure notification if configured
+    // Send failure notifications if configured
     if (config.secrets.slackWebhookUrl) {
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'sync-live',
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'sync-live',
         success: false,
         error: error.message,
@@ -38964,6 +39038,7 @@ function getConfig() {
       stagingThemeId: process.env.STAGING_THEME_ID,
       productionThemeId: process.env.PRODUCTION_THEME_ID,
       slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+      msTeamsWebhookUrl: process.env.MS_TEAMS_WEBHOOK_URL,
       githubToken: process.env.GITHUB_TOKEN,
     },
   };
@@ -38980,6 +39055,7 @@ function getConfig() {
             stagingThemeId: config.secrets.stagingThemeId ? '[REDACTED]' : undefined,
             productionThemeId: config.secrets.productionThemeId ? '[REDACTED]' : undefined,
             slackWebhookUrl: config.secrets.slackWebhookUrl ? '[REDACTED]' : undefined,
+            msTeamsWebhookUrl: config.secrets.msTeamsWebhookUrl ? '[REDACTED]' : undefined,
             githubToken: config.secrets.githubToken ? '[REDACTED]' : undefined,
           },
         },
@@ -39293,6 +39369,239 @@ module.exports = {
   fetchFromRemote,
   createOrCheckoutBranch,
   getChangedFiles,
+};
+
+
+/***/ }),
+
+/***/ 2405:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(7484);
+const axios = __nccwpck_require__(7269);
+const github = __nccwpck_require__(3228);
+
+/**
+ * Send MS Teams notification
+ * @param {Object} options - Notification options
+ * @returns {Promise<void>}
+ */
+async function sendMSTeamsNotification(options) {
+  try {
+    const {
+      webhookUrl,
+      mode,
+      success,
+      themeName,
+      themeId,
+      previewUrl,
+      editorUrl,
+      version,
+      deploymentTime,
+      error,
+    } = options;
+
+    if (!webhookUrl) {
+      core.warning('MS Teams webhook URL not configured, skipping notification');
+      return;
+    }
+
+    // Get GitHub context
+    const context = github.context;
+    const repository = `${context.repo.owner}/${context.repo.repo}`;
+    const branch = context.ref ? context.ref.replace('refs/heads/', '') : 'unknown';
+    const commit = context.sha ? context.sha.substring(0, 7) : 'unknown';
+    const actor = context.actor || 'unknown';
+    const workflowUrl = `${context.serverUrl}/${repository}/actions/runs/${context.runId}`;
+
+    // Build message based on mode and status
+    const message = buildMSTeamsMessage({
+      mode,
+      success,
+      repository,
+      branch,
+      commit,
+      actor,
+      themeName,
+      themeId,
+      previewUrl,
+      editorUrl,
+      version,
+      deploymentTime,
+      error,
+      workflowUrl,
+    });
+
+    // Send to MS Teams
+    const response = await axios.post(webhookUrl, message, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 10000,
+    });
+
+    if (response.status === 200) {
+      core.info('✅ MS Teams notification sent successfully');
+    } else {
+      core.warning(`MS Teams notification returned status: ${response.status}`);
+    }
+  } catch (error) {
+    // Don't fail the workflow if MS Teams notification fails
+    core.warning(`Failed to send MS Teams notification: ${error.message}`);
+  }
+}
+
+/**
+ * Build MS Teams message payload (Adaptive Card format)
+ * @param {Object} params - Message parameters
+ * @returns {Object} MS Teams message payload
+ */
+function buildMSTeamsMessage(params) {
+  const {
+    mode,
+    success,
+    repository,
+    branch,
+    commit,
+    actor,
+    themeName,
+    themeId,
+    previewUrl,
+    editorUrl,
+    version,
+    deploymentTime,
+    error,
+    workflowUrl,
+  } = params;
+
+  // Determine emoji and status text based on success
+  const emoji = success ? '✅' : '❌';
+  const statusText = success ? 'Success' : 'Failed';
+
+  // Mode-specific title
+  const titles = {
+    staging: 'Staging Deployment',
+    production: 'Production Deployment',
+    'sync-live': 'Live Theme Sync',
+  };
+  const title = titles[mode] || 'Theme Deployment';
+
+  // Build facts (key-value pairs)
+  const facts = [
+    {
+      title: 'Status',
+      value: `${emoji} ${statusText}`,
+    },
+    {
+      title: 'Repository',
+      value: repository,
+    },
+    {
+      title: 'Branch',
+      value: branch,
+    },
+    {
+      title: 'Commit',
+      value: commit,
+    },
+    {
+      title: 'Triggered By',
+      value: actor,
+    },
+  ];
+
+  // Add success-specific facts
+  if (success) {
+    if (themeName) {
+      facts.push({
+        title: 'Theme',
+        value: `${themeName} (ID: ${themeId})`,
+      });
+    }
+
+    if (version) {
+      facts.push({
+        title: 'Version',
+        value: version,
+      });
+    }
+
+    if (deploymentTime) {
+      facts.push({
+        title: 'Duration',
+        value: `${deploymentTime}s`,
+      });
+    }
+  } else if (error) {
+    facts.push({
+      title: 'Error',
+      value: error,
+    });
+  }
+
+  // Build actions (buttons)
+  const actions = [];
+
+  if (previewUrl) {
+    actions.push({
+      type: 'Action.OpenUrl',
+      title: '🔍 Preview Theme',
+      url: previewUrl,
+    });
+  }
+
+  if (editorUrl) {
+    actions.push({
+      type: 'Action.OpenUrl',
+      title: '✏️ Theme Editor',
+      url: editorUrl,
+    });
+  }
+
+  if (workflowUrl) {
+    actions.push({
+      type: 'Action.OpenUrl',
+      title: '📋 View Workflow',
+      url: workflowUrl,
+    });
+  }
+
+  // Build Adaptive Card
+  return {
+    type: 'message',
+    attachments: [
+      {
+        contentType: 'application/vnd.microsoft.card.adaptive',
+        content: {
+          type: 'AdaptiveCard',
+          body: [
+            {
+              type: 'TextBlock',
+              size: 'Large',
+              weight: 'Bolder',
+              text: `${emoji} ${title}`,
+              wrap: true,
+            },
+            {
+              type: 'FactSet',
+              facts: facts,
+            },
+          ],
+          actions: actions.length > 0 ? actions : undefined,
+          $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+          version: '1.4',
+          msteams: {
+            width: 'Full',
+          },
+        },
+      },
+    ],
+  };
+}
+
+module.exports = {
+  sendMSTeamsNotification,
+  buildMSTeamsMessage,
 };
 
 

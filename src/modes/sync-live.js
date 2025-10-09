@@ -3,6 +3,7 @@ const exec = require('@actions/exec');
 const { getLiveTheme, pullThemeFiles } = require('../utils/shopify-cli');
 const { normalizeStore } = require('../utils/validators');
 const { sendSlackNotification } = require('../utils/slack');
+const { sendMSTeamsNotification } = require('../utils/msteams');
 const {
   configureGitUser,
   createPullRequest,
@@ -315,11 +316,26 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
       themeId: liveTheme.id.toString(),
     };
 
-    // Step 8: Send Slack notification if configured
+    // Step 8: Send notifications if configured
     if (config.secrets.slackWebhookUrl) {
       core.startGroup('🔔 Sending Slack notification');
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'sync-live',
+        success: true,
+        themeName: liveTheme.name,
+        themeId: liveTheme.id.toString(),
+        filesCount: changedFiles.length,
+        pullRequestUrl,
+        syncTime,
+      });
+      core.endGroup();
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      core.startGroup('🔔 Sending MS Teams notification');
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'sync-live',
         success: true,
         themeName: liveTheme.name,
@@ -347,10 +363,19 @@ ${changedFiles.map((f) => `- \`${f}\``).join('\n')}
   } catch (error) {
     core.error(`Live sync failed: ${error.message}`);
 
-    // Send failure notification if configured
+    // Send failure notifications if configured
     if (config.secrets.slackWebhookUrl) {
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'sync-live',
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'sync-live',
         success: false,
         error: error.message,

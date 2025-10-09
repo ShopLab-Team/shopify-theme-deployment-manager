@@ -9,6 +9,7 @@ const {
 const { normalizeStore } = require('../utils/validators');
 const { buildAssets } = require('../utils/build');
 const { sendSlackNotification } = require('../utils/slack');
+const { sendMSTeamsNotification } = require('../utils/msteams');
 
 /**
  * Execute staging deployment
@@ -154,11 +155,25 @@ async function stagingDeploy(config) {
       deploymentTime,
     };
 
-    // Step 6: Send Slack notification if configured
+    // Step 6: Send notifications if configured
     if (config.secrets.slackWebhookUrl) {
       core.startGroup('🔔 Sending Slack notification');
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'staging',
+        success: true,
+        themeName: stagingTheme.name,
+        themeId: stagingTheme.id.toString(),
+        previewUrl: result.previewUrl,
+        deploymentTime,
+      });
+      core.endGroup();
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      core.startGroup('🔔 Sending MS Teams notification');
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'staging',
         success: true,
         themeName: stagingTheme.name,
@@ -181,10 +196,19 @@ async function stagingDeploy(config) {
   } catch (error) {
     core.error(`Staging deployment failed: ${error.message}`);
 
-    // Send failure notification if configured
+    // Send failure notifications if configured
     if (config.secrets.slackWebhookUrl) {
       await sendSlackNotification({
         webhookUrl: config.secrets.slackWebhookUrl,
+        mode: 'staging',
+        success: false,
+        error: error.message,
+      });
+    }
+
+    if (config.secrets.msTeamsWebhookUrl) {
+      await sendMSTeamsNotification({
+        webhookUrl: config.secrets.msTeamsWebhookUrl,
         mode: 'staging',
         success: false,
         error: error.message,

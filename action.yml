@@ -165,6 +165,9 @@ inputs:
     required: false
     default: 'false'
 
+# Note: Secrets like SHOPIFY_CLI_THEME_TOKEN, SLACK_WEBHOOK_URL, MS_TEAMS_WEBHOOK_URL, and GITHUB_TOKEN
+# are automatically passed from the workflow environment variables
+
 outputs:
   theme_id:
     description: 'ID of the deployed theme'

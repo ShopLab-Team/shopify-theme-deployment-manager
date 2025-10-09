@@ -135,6 +135,7 @@ function getConfig() {
       stagingThemeId: process.env.STAGING_THEME_ID,
       productionThemeId: process.env.PRODUCTION_THEME_ID,
       slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+      msTeamsWebhookUrl: process.env.MS_TEAMS_WEBHOOK_URL,
       githubToken: process.env.GITHUB_TOKEN,
     },
   };
@@ -151,6 +152,7 @@ function getConfig() {
             stagingThemeId: config.secrets.stagingThemeId ? '[REDACTED]' : undefined,
             productionThemeId: config.secrets.productionThemeId ? '[REDACTED]' : undefined,
             slackWebhookUrl: config.secrets.slackWebhookUrl ? '[REDACTED]' : undefined,
+            msTeamsWebhookUrl: config.secrets.msTeamsWebhookUrl ? '[REDACTED]' : undefined,
             githubToken: config.secrets.githubToken ? '[REDACTED]' : undefined,
           },
         },
