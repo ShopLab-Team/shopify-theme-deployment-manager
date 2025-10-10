@@ -205,15 +205,15 @@ describe('backup', () => {
       const capacity = await checkThemeCapacity('test-token', 'test-store');
 
       expect(capacity.current).toBe(15);
-      expect(capacity.max).toBe(20);
-      expect(capacity.available).toBe(5);
+      expect(capacity.max).toBe(100);
+      expect(capacity.available).toBe(85);
       expect(capacity.backups).toBe(5);
       expect(capacity.canCreate).toBe(true);
       expect(capacity.needsCleanup).toBe(false);
     });
 
     it('should indicate cleanup needed when at limit', async () => {
-      const mockThemes = Array(20)
+      const mockThemes = Array(100)
         .fill(null)
         .map((_, i) => ({
           id: i + 1,
@@ -225,7 +225,27 @@ describe('backup', () => {
 
       const capacity = await checkThemeCapacity('test-token', 'test-store');
 
+      expect(capacity.current).toBe(100);
+      expect(capacity.available).toBe(0);
+      expect(capacity.canCreate).toBe(false);
+      expect(capacity.needsCleanup).toBe(true);
+    });
+
+    it('should work with limited stores (20 theme limit)', async () => {
+      const mockThemes = Array(20)
+        .fill(null)
+        .map((_, i) => ({
+          id: i + 1,
+          name: i < 5 ? `BACKUP_${i}` : `Theme ${i}`,
+          role: 'unpublished',
+        }));
+
+      listThemes.mockResolvedValue(mockThemes);
+
+      const capacity = await checkThemeCapacity('test-token', 'test-store', { maxThemes: 20 });
+
       expect(capacity.current).toBe(20);
+      expect(capacity.max).toBe(20);
       expect(capacity.available).toBe(0);
       expect(capacity.canCreate).toBe(false);
       expect(capacity.needsCleanup).toBe(true);
@@ -250,7 +270,7 @@ describe('backup', () => {
     });
 
     it('should delete oldest backup when at capacity', async () => {
-      const mockThemes = Array(20)
+      const mockThemes = Array(100)
         .fill(null)
         .map((_, i) => ({
           id: i + 1,
@@ -273,7 +293,7 @@ describe('backup', () => {
     });
 
     it('should throw error if no space and no backups', async () => {
-      const mockThemes = Array(20)
+      const mockThemes = Array(100)
         .fill(null)
         .map((_, i) => ({
           id: i + 1,
@@ -285,6 +305,29 @@ describe('backup', () => {
 
       await expect(ensureThemeCapacity('test-token', 'test-store')).rejects.toThrow(
         'Theme limit reached'
+      );
+    });
+
+    it('should work with limited stores at 20 theme limit', async () => {
+      const mockThemes = Array(20)
+        .fill(null)
+        .map((_, i) => ({
+          id: i + 1,
+          name: i < 2 ? `BACKUP_${i}` : `Theme ${i}`,
+          role: 'unpublished',
+          created_at: new Date(2024, 0, i + 1).toISOString(),
+        }));
+
+      listThemes.mockResolvedValue(mockThemes);
+      exec.exec.mockResolvedValue(0);
+
+      await ensureThemeCapacity('test-token', 'test-store', { prefix: 'BACKUP_', maxThemes: 20 });
+
+      // Should delete the oldest backup
+      expect(exec.exec).toHaveBeenCalledWith(
+        'shopify',
+        expect.arrayContaining(['theme', 'delete', '--theme', '1']),
+        expect.any(Object)
       );
     });
   });

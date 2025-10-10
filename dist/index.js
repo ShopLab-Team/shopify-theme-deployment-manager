@@ -38704,7 +38704,7 @@ async function deleteTheme(token, store, themeId) {
  * @returns {Promise<Object>} Theme capacity info
  */
 async function checkThemeCapacity(token, store, options = {}) {
-  const { maxThemes = 20, prefix = 'BACKUP_' } = options;
+  const { maxThemes = 100, prefix = 'BACKUP_' } = options;
 
   try {
     const themes = await listThemes(token, store);
