@@ -270,3 +270,5 @@ runs:
         INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
         INPUT_SYNC_TYPE: ${{ inputs.sync_type }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        # Secrets - these are passed from the workflow environment
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
