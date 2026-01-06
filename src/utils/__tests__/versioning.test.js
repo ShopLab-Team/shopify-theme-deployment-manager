@@ -188,13 +188,14 @@ describe('versioning', () => {
       getThemeById.mockResolvedValue(mockTheme);
       exec.exec.mockResolvedValue(0);
 
-      // Pass starting version
+      // Pass starting version (increments it)
       const result = await renameThemeWithVersion(
         'test-token',
         'test-store',
         '123456',
         'X.XX.XX',
-        '3.00.00'
+        '3.00.00',
+        false
       );
 
       expect(result).toEqual({
@@ -206,7 +207,7 @@ describe('versioning', () => {
       });
     });
 
-    it('should ignore starting version if theme already has version', async () => {
+    it('should use exact version when useExactVersion is true', async () => {
       const mockTheme = {
         id: 123456,
         name: 'PRODUCTION [1.05.10]',
@@ -215,21 +216,22 @@ describe('versioning', () => {
       getThemeById.mockResolvedValue(mockTheme);
       exec.exec.mockResolvedValue(0);
 
-      // Pass starting version, but theme already has version
+      // Pass version with useExactVersion flag (no increment)
       const result = await renameThemeWithVersion(
         'test-token',
         'test-store',
         '123456',
         'X.XX.XX',
-        '3.00.00'
+        '2.05.10',
+        true
       );
 
-      // Should use theme's existing version, not starting version
+      // Should use exact version without increment
       expect(result).toEqual({
         oldVersion: '1.05.10',
-        version: '1.05.11',
+        version: '2.05.10',
         oldName: 'PRODUCTION [1.05.10]',
-        name: 'PRODUCTION [1.05.11]',
+        name: 'PRODUCTION [2.05.10]',
         baseName: 'PRODUCTION',
       });
     });

@@ -332,7 +332,8 @@ describe('production', () => {
         'test-store',
         '123456',
         'X.X.X',
-        '3.0.0'
+        '3.0.0',
+        false
       );
     });
 
@@ -346,17 +347,17 @@ describe('production', () => {
         },
       };
 
-      const mockProductionTheme = { id: 123456, name: 'PRODUCTION [1.0.0]' };
+      const mockProductionTheme = { id: 123456, name: 'PRODUCTION [1.0.4]' };
       getThemeById.mockResolvedValue(mockProductionTheme);
       createBackup.mockResolvedValue({ id: 999999 });
       cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
       ensureThemeCapacity.mockResolvedValue();
       pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
-      getLatestReleaseVersion.mockResolvedValue('2.5.10');
+      getLatestReleaseVersion.mockResolvedValue('1.0.9');
       renameThemeWithVersion.mockResolvedValue({
-        oldVersion: '2.5.10',
-        version: '2.5.11',
-        name: 'PRODUCTION [2.5.11]',
+        oldVersion: '1.0.4',
+        version: '1.0.9',
+        name: 'PRODUCTION [1.0.9]',
       });
 
       await productionDeploy(configWithRelease);
@@ -364,13 +365,14 @@ describe('production', () => {
       // Should fetch GitHub release version
       expect(getLatestReleaseVersion).toHaveBeenCalledWith('github-token');
 
-      // Should pass release version to renameThemeWithVersion
+      // Should pass release version with useExactVersion flag
       expect(renameThemeWithVersion).toHaveBeenCalledWith(
         'test-token',
         'test-store',
         '123456',
         'X.X.X',
-        '2.5.10'
+        '1.0.9',
+        true
       );
     });
 
@@ -402,13 +404,14 @@ describe('production', () => {
       // Should try to fetch GitHub release version
       expect(getLatestReleaseVersion).toHaveBeenCalled();
 
-      // Should fallback to undefined (theme will use its own version)
+      // Should fallback to undefined with useExactVersion false
       expect(renameThemeWithVersion).toHaveBeenCalledWith(
         'test-token',
         'test-store',
         '123456',
         'X.XX.XX',
-        undefined
+        undefined,
+        false
       );
     });
   });

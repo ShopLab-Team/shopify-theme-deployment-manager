@@ -125,7 +125,8 @@ function bumpVersion(currentVersion, format = 'X.XX.XX') {
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
  * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
- * @param {string} startVersion - Optional starting version to use if theme has no version
+ * @param {string} startVersion - Optional version (from versioning_start or release)
+ * @param {boolean} useExactVersion - If true, use startVersion as-is without bumping
  * @returns {Promise<Object>} Version result
  */
 async function renameThemeWithVersion(
@@ -133,7 +134,8 @@ async function renameThemeWithVersion(
   store,
   themeId,
   format = 'X.XX.XX',
-  startVersion = null
+  startVersion = null,
+  useExactVersion = false
 ) {
   try {
     // Get current theme name
@@ -149,17 +151,29 @@ async function renameThemeWithVersion(
     // Extract current version from theme name
     const versionInfo = extractVersion(currentName);
 
-    // Determine which version to use
-    let oldVersion = versionInfo.version;
+    let oldVersion;
+    let newVersion;
 
-    // If theme has no version and a starting version is provided, use it
-    if (!oldVersion && startVersion) {
-      core.info(`Theme has no version, using configured starting version: ${startVersion}`);
-      oldVersion = startVersion;
+    if (useExactVersion && startVersion) {
+      // Use the provided version exactly (e.g., from GitHub release)
+      oldVersion = versionInfo.version;
+      newVersion = startVersion;
+      core.info(`Using exact version from source: ${startVersion} (no increment)`);
+    } else {
+      // Determine which version to use for bumping
+      if (startVersion) {
+        // Starting version is provided (from versioning_start)
+        // Use it regardless of whether theme has a version
+        core.info(`Using provided version as base: ${startVersion}`);
+        oldVersion = startVersion;
+      } else {
+        // Use version from theme name
+        oldVersion = versionInfo.version;
+      }
+
+      // Auto-increment version
+      newVersion = bumpVersion(oldVersion, format);
     }
-
-    // Auto-increment version
-    const newVersion = bumpVersion(oldVersion, format);
 
     // Build new name
     const newName = `${versionInfo.baseName} [${newVersion}]`;

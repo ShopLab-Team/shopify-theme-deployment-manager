@@ -1,11 +1,5 @@
 const core = require('@actions/core');
-const {
-  getLiveTheme,
-  getThemeById,
-  pushThemeFiles,
-  packageTheme,
-  openTheme,
-} = require('../utils/shopify-cli');
+const { getLiveTheme, getThemeById, pushThemeFiles, openTheme } = require('../utils/shopify-cli');
 const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../utils/backup');
 const { normalizeStore } = require('../utils/validators');
 const { buildAssets } = require('../utils/build');
@@ -181,6 +175,7 @@ async function productionDeploy(config) {
       core.startGroup('🏷️ Updating version tag');
 
       let startVersion = config.versioning.start;
+      let useReleaseVersionDirectly = false;
 
       // If using GitHub release as version source, get latest release version
       if (config.versioning.source === 'release') {
@@ -188,6 +183,7 @@ async function productionDeploy(config) {
         const releaseVersion = await getLatestReleaseVersion(config.secrets.githubToken);
         if (releaseVersion) {
           startVersion = releaseVersion;
+          useReleaseVersionDirectly = true;
           core.info(`Latest GitHub release version: ${releaseVersion}`);
         } else {
           core.warning('No GitHub releases found, falling back to theme name version');
@@ -199,7 +195,8 @@ async function productionDeploy(config) {
         config.store,
         productionTheme.id.toString(),
         config.versioning.format,
-        startVersion
+        startVersion,
+        useReleaseVersionDirectly
       );
 
       newVersion = versionResult.version;
@@ -233,19 +230,7 @@ async function productionDeploy(config) {
       editorUrl = `https://${storeDomain}/admin/themes/${productionTheme.id}/editor`;
     }
 
-    // Package theme for release artifact (optional)
-    let packagePath = null;
-    if (config.versioning.enabled) {
-      try {
-        core.startGroup('📦 Creating theme package for release');
-        packagePath = await packageTheme('.', `theme-v${newVersion || '1.0.0'}.zip`);
-        core.info(`Theme package created: ${packagePath}`);
-        core.setOutput('package_path', packagePath); // Make it available as output
-        core.endGroup();
-      } catch (error) {
-        core.warning(`Failed to create theme package: ${error.message}`);
-      }
-    }
+    // Note: Theme packaging removed - users can create releases in their own workflows if needed
 
     // Prepare result
     const result = {
@@ -257,7 +242,6 @@ async function productionDeploy(config) {
       backupId: backupTheme?.id,
       backupName: backupTheme?.name,
       deploymentTime,
-      packagePath,
     };
 
     // Step 7: Send notifications if configured

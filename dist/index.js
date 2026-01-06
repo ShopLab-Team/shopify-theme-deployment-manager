@@ -37478,13 +37478,7 @@ module.exports = { run };
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(7484);
-const {
-  getLiveTheme,
-  getThemeById,
-  pushThemeFiles,
-  packageTheme,
-  openTheme,
-} = __nccwpck_require__(6206);
+const { getLiveTheme, getThemeById, pushThemeFiles, openTheme } = __nccwpck_require__(6206);
 const { createBackup, cleanupBackups, ensureThemeCapacity } = __nccwpck_require__(9713);
 const { normalizeStore } = __nccwpck_require__(6236);
 const { buildAssets } = __nccwpck_require__(8431);
@@ -37660,6 +37654,7 @@ async function productionDeploy(config) {
       core.startGroup('🏷️ Updating version tag');
 
       let startVersion = config.versioning.start;
+      let useReleaseVersionDirectly = false;
 
       // If using GitHub release as version source, get latest release version
       if (config.versioning.source === 'release') {
@@ -37667,6 +37662,7 @@ async function productionDeploy(config) {
         const releaseVersion = await getLatestReleaseVersion(config.secrets.githubToken);
         if (releaseVersion) {
           startVersion = releaseVersion;
+          useReleaseVersionDirectly = true;
           core.info(`Latest GitHub release version: ${releaseVersion}`);
         } else {
           core.warning('No GitHub releases found, falling back to theme name version');
@@ -37678,7 +37674,8 @@ async function productionDeploy(config) {
         config.store,
         productionTheme.id.toString(),
         config.versioning.format,
-        startVersion
+        startVersion,
+        useReleaseVersionDirectly
       );
 
       newVersion = versionResult.version;
@@ -37712,19 +37709,7 @@ async function productionDeploy(config) {
       editorUrl = `https://${storeDomain}/admin/themes/${productionTheme.id}/editor`;
     }
 
-    // Package theme for release artifact (optional)
-    let packagePath = null;
-    if (config.versioning.enabled) {
-      try {
-        core.startGroup('📦 Creating theme package for release');
-        packagePath = await packageTheme('.', `theme-v${newVersion || '1.0.0'}.zip`);
-        core.info(`Theme package created: ${packagePath}`);
-        core.setOutput('package_path', packagePath); // Make it available as output
-        core.endGroup();
-      } catch (error) {
-        core.warning(`Failed to create theme package: ${error.message}`);
-      }
-    }
+    // Note: Theme packaging removed - users can create releases in their own workflows if needed
 
     // Prepare result
     const result = {
@@ -37736,7 +37721,6 @@ async function productionDeploy(config) {
       backupId: backupTheme?.id,
       backupName: backupTheme?.name,
       deploymentTime,
-      packagePath,
     };
 
     // Step 7: Send notifications if configured
@@ -41332,7 +41316,8 @@ function bumpVersion(currentVersion, format = 'X.XX.XX') {
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
  * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
- * @param {string} startVersion - Optional starting version to use if theme has no version
+ * @param {string} startVersion - Optional version (from versioning_start or release)
+ * @param {boolean} useExactVersion - If true, use startVersion as-is without bumping
  * @returns {Promise<Object>} Version result
  */
 async function renameThemeWithVersion(
@@ -41340,7 +41325,8 @@ async function renameThemeWithVersion(
   store,
   themeId,
   format = 'X.XX.XX',
-  startVersion = null
+  startVersion = null,
+  useExactVersion = false
 ) {
   try {
     // Get current theme name
@@ -41356,17 +41342,29 @@ async function renameThemeWithVersion(
     // Extract current version from theme name
     const versionInfo = extractVersion(currentName);
 
-    // Determine which version to use
-    let oldVersion = versionInfo.version;
+    let oldVersion;
+    let newVersion;
 
-    // If theme has no version and a starting version is provided, use it
-    if (!oldVersion && startVersion) {
-      core.info(`Theme has no version, using configured starting version: ${startVersion}`);
-      oldVersion = startVersion;
+    if (useExactVersion && startVersion) {
+      // Use the provided version exactly (e.g., from GitHub release)
+      oldVersion = versionInfo.version;
+      newVersion = startVersion;
+      core.info(`Using exact version from source: ${startVersion} (no increment)`);
+    } else {
+      // Determine which version to use for bumping
+      if (startVersion) {
+        // Starting version is provided (from versioning_start)
+        // Use it regardless of whether theme has a version
+        core.info(`Using provided version as base: ${startVersion}`);
+        oldVersion = startVersion;
+      } else {
+        // Use version from theme name
+        oldVersion = versionInfo.version;
+      }
+
+      // Auto-increment version
+      newVersion = bumpVersion(oldVersion, format);
     }
-
-    // Auto-increment version
-    const newVersion = bumpVersion(oldVersion, format);
 
     // Build new name
     const newName = `${versionInfo.baseName} [${newVersion}]`;
