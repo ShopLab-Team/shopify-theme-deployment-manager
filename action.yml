@@ -174,8 +174,13 @@ inputs:
     required: false
     default: 'false'
 
-# Note: Secrets like SHOPIFY_CLI_THEME_TOKEN, SLACK_WEBHOOK_URL, MS_TEAMS_WEBHOOK_URL, and GITHUB_TOKEN
-# are automatically passed from the workflow environment variables
+# Note: The following secrets should be passed via the 'env' section in your workflow:
+# - SHOPIFY_CLI_THEME_TOKEN (required)
+# - PRODUCTION_THEME_ID or STAGING_THEME_ID (required based on mode)
+# - SHOPIFY_STORE_URL (optional if using 'store' input)
+# - GITHUB_TOKEN (required for versioning_source: release and sync-live PR creation)
+# - SLACK_WEBHOOK_URL (optional for Slack notifications)
+# - MS_TEAMS_WEBHOOK_URL (optional for MS Teams notifications)
 
 outputs:
   theme_id:
@@ -270,5 +275,3 @@ runs:
         INPUT_SYNC_COMMIT_MESSAGE: ${{ inputs.sync_commit_message }}
         INPUT_SYNC_TYPE: ${{ inputs.sync_type }}
         INPUT_DRY_RUN: ${{ inputs.dry_run }}
-        # Secrets - these are passed from the workflow environment
-        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}

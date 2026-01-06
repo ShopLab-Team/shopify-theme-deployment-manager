@@ -106,10 +106,12 @@ jobs:
           SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
           SHOPIFY_STORE_URL: ${{ secrets.SHOPIFY_STORE_URL }}  # Optional if using 'store' input
           PRODUCTION_THEME_ID: ${{ secrets.PRODUCTION_THEME_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required for versioning_source: release
           
           # Optional Secrets
           STAGING_THEME_ID: ${{ secrets.STAGING_THEME_ID }}  # Not used in production
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # For notifications (handled internally by action)
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  # For notifications
+          MS_TEAMS_WEBHOOK_URL: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}  # For MS Teams notifications
       
       # ============================================================
       # OPTIONAL: GitHub Release Creation
