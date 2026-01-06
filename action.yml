@@ -119,7 +119,7 @@ inputs:
     default: 'true'
   
   versioning_format:
-    description: 'Version format: "X.X.X" (single digits) or "X.XX.XX" (double digits, default)'
+    description: 'Version format: "X.X.X" (no padding), "X.X.XX" (patch padding), or "X.XX.XX" (full padding, default)'
     required: false
     default: 'X.XX.XX'
   

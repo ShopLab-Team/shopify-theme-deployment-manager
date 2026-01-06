@@ -5,6 +5,7 @@ jest.mock('../../utils/backup');
 jest.mock('../../utils/build');
 jest.mock('../../utils/slack');
 jest.mock('../../utils/versioning');
+jest.mock('../../utils/version-file');
 
 const core = require('@actions/core');
 const { getLiveTheme, getThemeById, pushThemeFiles } = require('../../utils/shopify-cli');
@@ -12,6 +13,7 @@ const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../../uti
 const { buildAssets } = require('../../utils/build');
 const { sendSlackNotification } = require('../../utils/slack');
 const { renameThemeWithVersion } = require('../../utils/versioning');
+const { writeVersionFile } = require('../../utils/version-file');
 const { productionDeploy } = require('../production');
 
 describe('production', () => {
@@ -101,6 +103,7 @@ describe('production', () => {
       expect(cleanupBackups).toHaveBeenCalled();
       expect(pushThemeFiles).toHaveBeenCalledTimes(2); // Phase A and Phase B
       expect(renameThemeWithVersion).toHaveBeenCalled();
+      expect(writeVersionFile).toHaveBeenCalledWith('1.0.1');
       expect(sendSlackNotification).toHaveBeenCalled();
 
       expect(result).toMatchObject({
@@ -174,6 +177,7 @@ describe('production', () => {
       const result = await productionDeploy(configNoVersioning);
 
       expect(renameThemeWithVersion).not.toHaveBeenCalled();
+      expect(writeVersionFile).not.toHaveBeenCalled();
       expect(result.version).toBeNull();
       expect(result.themeName).toBe('PRODUCTION');
     });
