@@ -37491,7 +37491,6 @@ const { buildAssets } = __nccwpck_require__(8431);
 const { sendSlackNotification } = __nccwpck_require__(1343);
 const { sendMSTeamsNotification } = __nccwpck_require__(2405);
 const { renameThemeWithVersion } = __nccwpck_require__(1363);
-const { readVersionFile, writeVersionFile } = __nccwpck_require__(1358);
 
 /**
  * Execute production deployment
@@ -37659,23 +37658,12 @@ async function productionDeploy(config) {
     if (config.versioning.enabled) {
       core.startGroup('🏷️ Updating version tag');
 
-      // Check if version file exists and use it as source of truth
-      const fileVersion = await readVersionFile();
-      let sourceVersion = null;
-
-      if (fileVersion) {
-        core.info(`Using version from file: ${fileVersion}`);
-        sourceVersion = fileVersion;
-      } else {
-        core.info('No version file found, using theme name version');
-      }
-
       const versionResult = await renameThemeWithVersion(
         config.secrets.themeToken,
         config.store,
         productionTheme.id.toString(),
         config.versioning.format,
-        sourceVersion
+        config.versioning.start
       );
 
       newVersion = versionResult.version;
@@ -37683,9 +37671,6 @@ async function productionDeploy(config) {
 
       core.info(`Theme renamed to: ${versionResult.name}`);
       core.info(`Version: ${versionResult.oldVersion || 'none'} → ${versionResult.version}`);
-
-      // Write version to version file
-      await writeVersionFile(newVersion);
 
       core.endGroup();
     }
@@ -39027,6 +39012,7 @@ function getConfig() {
     versioning: {
       enabled: parseBoolean(getInput('versioning_enabled')),
       format: getInput('versioning_format') || 'X.XX.XX',
+      start: getInput('versioning_start') || null,
     },
 
     // Sync configuration
@@ -41120,71 +41106,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1358:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const core = __nccwpck_require__(7484);
-const fs = (__nccwpck_require__(9896).promises);
-
-/**
- * Read version from version file
- * @param {string} filePath - Path to version file (default: './version')
- * @returns {Promise<string|null>} Version string or null if file doesn't exist
- */
-async function readVersionFile(filePath = './version') {
-  try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const version = content.trim();
-    core.debug(`Read version from ${filePath}: ${version}`);
-    return version;
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      core.debug(`Version file not found: ${filePath}`);
-      return null;
-    }
-    throw error;
-  }
-}
-
-/**
- * Write version to version file
- * @param {string} version - Version string to write
- * @param {string} filePath - Path to version file (default: './version')
- * @returns {Promise<void>}
- */
-async function writeVersionFile(version, filePath = './version') {
-  try {
-    await fs.writeFile(filePath, version, 'utf-8');
-    core.info(`✅ Version file updated: ${filePath} → ${version}`);
-  } catch (error) {
-    core.error(`Failed to write version file: ${error.message}`);
-    throw error;
-  }
-}
-
-/**
- * Check if version file exists
- * @param {string} filePath - Path to version file (default: './version')
- * @returns {Promise<boolean>} True if file exists
- */
-async function versionFileExists(filePath = './version') {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-module.exports = {
-  readVersionFile,
-  writeVersionFile,
-  versionFileExists,
-};
-
-
-/***/ }),
-
 /***/ 1363:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -41315,7 +41236,7 @@ function bumpVersion(currentVersion, format = 'X.XX.XX') {
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
  * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
- * @param {string} sourceVersion - Optional version to use instead of theme name version (from version file)
+ * @param {string} startVersion - Optional starting version to use if theme has no version
  * @returns {Promise<Object>} Version result
  */
 async function renameThemeWithVersion(
@@ -41323,7 +41244,7 @@ async function renameThemeWithVersion(
   store,
   themeId,
   format = 'X.XX.XX',
-  sourceVersion = null
+  startVersion = null
 ) {
   try {
     // Get current theme name
@@ -41340,14 +41261,12 @@ async function renameThemeWithVersion(
     const versionInfo = extractVersion(currentName);
 
     // Determine which version to use
-    let oldVersion;
-    if (sourceVersion) {
-      // Use version from external source (e.g., version file)
-      oldVersion = sourceVersion;
-      core.info(`Using external version as source: ${sourceVersion}`);
-    } else {
-      // Use version from theme name
-      oldVersion = versionInfo.version;
+    let oldVersion = versionInfo.version;
+
+    // If theme has no version and a starting version is provided, use it
+    if (!oldVersion && startVersion) {
+      core.info(`Theme has no version, using configured starting version: ${startVersion}`);
+      oldVersion = startVersion;
     }
 
     // Auto-increment version

@@ -123,6 +123,10 @@ inputs:
     required: false
     default: 'X.XX.XX'
   
+  versioning_start:
+    description: 'Optional starting version (e.g., "3.0.0"). If theme has no version, starts here instead of 0.00.01'
+    required: false
+  
   # Sync Configuration
   sync_files:
     description: 'Files to sync: all (sync all theme files), json (only JSON files), custom (use sync_only_globs patterns)'
@@ -251,6 +255,7 @@ runs:
         INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
         INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
         INPUT_VERSIONING_FORMAT: ${{ inputs.versioning_format }}
+        INPUT_VERSIONING_START: ${{ inputs.versioning_start }}
         INPUT_SYNC_FILES: ${{ inputs.sync_files }}
         INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}
         INPUT_SYNC_EXCLUDE_PATTERN: ${{ inputs.sync_exclude_pattern }}

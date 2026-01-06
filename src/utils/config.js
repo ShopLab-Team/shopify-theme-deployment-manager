@@ -107,6 +107,7 @@ function getConfig() {
     versioning: {
       enabled: parseBoolean(getInput('versioning_enabled')),
       format: getInput('versioning_format') || 'X.XX.XX',
+      start: getInput('versioning_start') || null,
     },
 
     // Sync configuration

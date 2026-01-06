@@ -179,29 +179,57 @@ describe('versioning', () => {
       });
     });
 
-    it('should use external source version when provided', async () => {
+    it('should use starting version when theme has no version', async () => {
       const mockTheme = {
         id: 123456,
-        name: 'PRODUCTION [1.0.0]',
+        name: 'PRODUCTION',
       };
 
       getThemeById.mockResolvedValue(mockTheme);
       exec.exec.mockResolvedValue(0);
 
-      // Pass external version (e.g., from version file)
+      // Pass starting version
       const result = await renameThemeWithVersion(
         'test-token',
         'test-store',
         '123456',
         'X.XX.XX',
-        '2.05.10'
+        '3.00.00'
       );
 
       expect(result).toEqual({
-        oldVersion: '2.05.10',
-        version: '2.05.11',
-        oldName: 'PRODUCTION [1.0.0]',
-        name: 'PRODUCTION [2.05.11]',
+        oldVersion: '3.00.00',
+        version: '3.00.01',
+        oldName: 'PRODUCTION',
+        name: 'PRODUCTION [3.00.01]',
+        baseName: 'PRODUCTION',
+      });
+    });
+
+    it('should ignore starting version if theme already has version', async () => {
+      const mockTheme = {
+        id: 123456,
+        name: 'PRODUCTION [1.05.10]',
+      };
+
+      getThemeById.mockResolvedValue(mockTheme);
+      exec.exec.mockResolvedValue(0);
+
+      // Pass starting version, but theme already has version
+      const result = await renameThemeWithVersion(
+        'test-token',
+        'test-store',
+        '123456',
+        'X.XX.XX',
+        '3.00.00'
+      );
+
+      // Should use theme's existing version, not starting version
+      expect(result).toEqual({
+        oldVersion: '1.05.10',
+        version: '1.05.11',
+        oldName: 'PRODUCTION [1.05.10]',
+        name: 'PRODUCTION [1.05.11]',
         baseName: 'PRODUCTION',
       });
     });

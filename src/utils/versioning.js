@@ -125,7 +125,7 @@ function bumpVersion(currentVersion, format = 'X.XX.XX') {
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
  * @param {string} format - Version format ('X.X.X', 'X.X.XX', or 'X.XX.XX')
- * @param {string} sourceVersion - Optional version to use instead of theme name version (from version file)
+ * @param {string} startVersion - Optional starting version to use if theme has no version
  * @returns {Promise<Object>} Version result
  */
 async function renameThemeWithVersion(
@@ -133,7 +133,7 @@ async function renameThemeWithVersion(
   store,
   themeId,
   format = 'X.XX.XX',
-  sourceVersion = null
+  startVersion = null
 ) {
   try {
     // Get current theme name
@@ -150,14 +150,12 @@ async function renameThemeWithVersion(
     const versionInfo = extractVersion(currentName);
 
     // Determine which version to use
-    let oldVersion;
-    if (sourceVersion) {
-      // Use version from external source (e.g., version file)
-      oldVersion = sourceVersion;
-      core.info(`Using external version as source: ${sourceVersion}`);
-    } else {
-      // Use version from theme name
-      oldVersion = versionInfo.version;
+    let oldVersion = versionInfo.version;
+
+    // If theme has no version and a starting version is provided, use it
+    if (!oldVersion && startVersion) {
+      core.info(`Theme has no version, using configured starting version: ${startVersion}`);
+      oldVersion = startVersion;
     }
 
     // Auto-increment version
