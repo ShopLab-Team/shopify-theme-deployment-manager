@@ -12,7 +12,7 @@ const { buildAssets } = require('../utils/build');
 const { sendSlackNotification } = require('../utils/slack');
 const { sendMSTeamsNotification } = require('../utils/msteams');
 const { renameThemeWithVersion } = require('../utils/versioning');
-const { writeVersionFile } = require('../utils/version-file');
+const { readVersionFile, writeVersionFile } = require('../utils/version-file');
 
 /**
  * Execute production deployment
@@ -180,11 +180,23 @@ async function productionDeploy(config) {
     if (config.versioning.enabled) {
       core.startGroup('🏷️ Updating version tag');
 
+      // Check if version file exists and use it as source of truth
+      const fileVersion = await readVersionFile();
+      let sourceVersion = null;
+
+      if (fileVersion) {
+        core.info(`Using version from file: ${fileVersion}`);
+        sourceVersion = fileVersion;
+      } else {
+        core.info('No version file found, using theme name version');
+      }
+
       const versionResult = await renameThemeWithVersion(
         config.secrets.themeToken,
         config.store,
         productionTheme.id.toString(),
-        config.versioning.format
+        config.versioning.format,
+        sourceVersion
       );
 
       newVersion = versionResult.version;

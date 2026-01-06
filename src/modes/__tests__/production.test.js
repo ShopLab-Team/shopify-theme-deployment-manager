@@ -5,7 +5,10 @@ jest.mock('../../utils/backup');
 jest.mock('../../utils/build');
 jest.mock('../../utils/slack');
 jest.mock('../../utils/versioning');
-jest.mock('../../utils/version-file');
+jest.mock('../../utils/version-file', () => ({
+  readVersionFile: jest.fn(),
+  writeVersionFile: jest.fn(),
+}));
 
 const core = require('@actions/core');
 const { getLiveTheme, getThemeById, pushThemeFiles } = require('../../utils/shopify-cli');
@@ -13,7 +16,7 @@ const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../../uti
 const { buildAssets } = require('../../utils/build');
 const { sendSlackNotification } = require('../../utils/slack');
 const { renameThemeWithVersion } = require('../../utils/versioning');
-const { writeVersionFile } = require('../../utils/version-file');
+const { readVersionFile, writeVersionFile } = require('../../utils/version-file');
 const { productionDeploy } = require('../production');
 
 describe('production', () => {
@@ -41,7 +44,7 @@ describe('production', () => {
       },
       versioning: {
         enabled: true,
-        strategy: 'patch',
+        format: 'X.XX.XX',
       },
       deploy: {
         ignoreJsonOnProd: true,
@@ -176,6 +179,7 @@ describe('production', () => {
 
       const result = await productionDeploy(configNoVersioning);
 
+      expect(readVersionFile).not.toHaveBeenCalled();
       expect(renameThemeWithVersion).not.toHaveBeenCalled();
       expect(writeVersionFile).not.toHaveBeenCalled();
       expect(result.version).toBeNull();
@@ -299,6 +303,40 @@ describe('production', () => {
       await productionDeploy(configNoSlack);
 
       expect(sendSlackNotification).not.toHaveBeenCalled();
+    });
+
+    it('should use version from file if exists', async () => {
+      const mockProductionTheme = { id: 123456, name: 'PRODUCTION [1.0.0]' };
+      getThemeById.mockResolvedValue(mockProductionTheme);
+      createBackup.mockResolvedValue({ id: 999999 });
+      cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
+      ensureThemeCapacity.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
+
+      // Mock version file exists with version 2.5.10
+      readVersionFile.mockResolvedValue('2.5.10');
+      renameThemeWithVersion.mockResolvedValue({
+        oldVersion: '2.5.10',
+        version: '2.5.11',
+        name: 'PRODUCTION [2.5.11]',
+      });
+
+      await productionDeploy(mockConfig);
+
+      // Should read version file
+      expect(readVersionFile).toHaveBeenCalled();
+
+      // Should pass version from file to renameThemeWithVersion
+      expect(renameThemeWithVersion).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456',
+        expect.any(String), // format from config
+        '2.5.10'
+      );
+
+      // Should write new version to file
+      expect(writeVersionFile).toHaveBeenCalledWith('2.5.11');
     });
   });
 });

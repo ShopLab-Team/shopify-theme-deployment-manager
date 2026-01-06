@@ -179,6 +179,33 @@ describe('versioning', () => {
       });
     });
 
+    it('should use external source version when provided', async () => {
+      const mockTheme = {
+        id: 123456,
+        name: 'PRODUCTION [1.0.0]',
+      };
+
+      getThemeById.mockResolvedValue(mockTheme);
+      exec.exec.mockResolvedValue(0);
+
+      // Pass external version (e.g., from version file)
+      const result = await renameThemeWithVersion(
+        'test-token',
+        'test-store',
+        '123456',
+        'X.XX.XX',
+        '2.05.10'
+      );
+
+      expect(result).toEqual({
+        oldVersion: '2.05.10',
+        version: '2.05.11',
+        oldName: 'PRODUCTION [1.0.0]',
+        name: 'PRODUCTION [2.05.11]',
+        baseName: 'PRODUCTION',
+      });
+    });
+
     it('should throw error if theme not found', async () => {
       getThemeById.mockResolvedValue(null);
 
