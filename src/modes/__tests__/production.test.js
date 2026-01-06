@@ -5,6 +5,7 @@ jest.mock('../../utils/backup');
 jest.mock('../../utils/build');
 jest.mock('../../utils/slack');
 jest.mock('../../utils/versioning');
+jest.mock('../../utils/github-release');
 
 const core = require('@actions/core');
 const { getLiveTheme, getThemeById, pushThemeFiles } = require('../../utils/shopify-cli');
@@ -12,6 +13,7 @@ const { createBackup, cleanupBackups, ensureThemeCapacity } = require('../../uti
 const { buildAssets } = require('../../utils/build');
 const { sendSlackNotification } = require('../../utils/slack');
 const { renameThemeWithVersion } = require('../../utils/versioning');
+const { getLatestReleaseVersion } = require('../../utils/github-release');
 const { productionDeploy } = require('../production');
 
 describe('production', () => {
@@ -40,6 +42,7 @@ describe('production', () => {
       versioning: {
         enabled: true,
         format: 'X.XX.XX',
+        source: 'theme',
       },
       deploy: {
         ignoreJsonOnProd: true,
@@ -56,6 +59,7 @@ describe('production', () => {
         themeToken: 'test-token',
         productionThemeId: '123456',
         slackWebhookUrl: 'https://hooks.slack.com/test',
+        githubToken: 'github-token',
       },
     };
 
@@ -303,6 +307,7 @@ describe('production', () => {
         versioning: {
           enabled: true,
           format: 'X.X.X',
+          source: 'theme',
           start: '3.0.0',
         },
       };
@@ -328,6 +333,82 @@ describe('production', () => {
         '123456',
         'X.X.X',
         '3.0.0'
+      );
+    });
+
+    it('should use GitHub release version when source is release', async () => {
+      const configWithRelease = {
+        ...mockConfig,
+        versioning: {
+          enabled: true,
+          format: 'X.X.X',
+          source: 'release',
+        },
+      };
+
+      const mockProductionTheme = { id: 123456, name: 'PRODUCTION [1.0.0]' };
+      getThemeById.mockResolvedValue(mockProductionTheme);
+      createBackup.mockResolvedValue({ id: 999999 });
+      cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
+      ensureThemeCapacity.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
+      getLatestReleaseVersion.mockResolvedValue('2.5.10');
+      renameThemeWithVersion.mockResolvedValue({
+        oldVersion: '2.5.10',
+        version: '2.5.11',
+        name: 'PRODUCTION [2.5.11]',
+      });
+
+      await productionDeploy(configWithRelease);
+
+      // Should fetch GitHub release version
+      expect(getLatestReleaseVersion).toHaveBeenCalledWith('github-token');
+
+      // Should pass release version to renameThemeWithVersion
+      expect(renameThemeWithVersion).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456',
+        'X.X.X',
+        '2.5.10'
+      );
+    });
+
+    it('should fallback to theme version if no GitHub releases found', async () => {
+      const configWithRelease = {
+        ...mockConfig,
+        versioning: {
+          enabled: true,
+          format: 'X.XX.XX',
+          source: 'release',
+        },
+      };
+
+      const mockProductionTheme = { id: 123456, name: 'PRODUCTION [1.05.10]' };
+      getThemeById.mockResolvedValue(mockProductionTheme);
+      createBackup.mockResolvedValue({ id: 999999 });
+      cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
+      ensureThemeCapacity.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
+      getLatestReleaseVersion.mockResolvedValue(null); // No releases
+      renameThemeWithVersion.mockResolvedValue({
+        oldVersion: '1.05.10',
+        version: '1.05.11',
+        name: 'PRODUCTION [1.05.11]',
+      });
+
+      await productionDeploy(configWithRelease);
+
+      // Should try to fetch GitHub release version
+      expect(getLatestReleaseVersion).toHaveBeenCalled();
+
+      // Should fallback to undefined (theme will use its own version)
+      expect(renameThemeWithVersion).toHaveBeenCalledWith(
+        'test-token',
+        'test-store',
+        '123456',
+        'X.XX.XX',
+        undefined
       );
     });
   });

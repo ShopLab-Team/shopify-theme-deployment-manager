@@ -107,6 +107,7 @@ function getConfig() {
     versioning: {
       enabled: parseBoolean(getInput('versioning_enabled')),
       format: getInput('versioning_format') || 'X.XX.XX',
+      source: getInput('versioning_source') || 'theme',
       start: getInput('versioning_start') || null,
     },
 

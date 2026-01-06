@@ -123,8 +123,13 @@ inputs:
     required: false
     default: 'X.XX.XX'
   
+  versioning_source:
+    description: 'Version source: "theme" (use theme name, default) or "release" (use latest GitHub release tag)'
+    required: false
+    default: 'theme'
+  
   versioning_start:
-    description: 'Optional starting version (e.g., "3.0.0"). If theme has no version, starts here instead of 0.00.01'
+    description: 'Optional starting version (e.g., "3.0.0"). Only used with versioning_source: theme if theme has no version'
     required: false
   
   # Sync Configuration
@@ -255,6 +260,7 @@ runs:
         INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
         INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
         INPUT_VERSIONING_FORMAT: ${{ inputs.versioning_format }}
+        INPUT_VERSIONING_SOURCE: ${{ inputs.versioning_source }}
         INPUT_VERSIONING_START: ${{ inputs.versioning_start }}
         INPUT_SYNC_FILES: ${{ inputs.sync_files }}
         INPUT_SYNC_ONLY_GLOBS: ${{ inputs.sync_only_globs }}

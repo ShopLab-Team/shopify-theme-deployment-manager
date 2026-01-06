@@ -12,6 +12,7 @@ const { buildAssets } = require('../utils/build');
 const { sendSlackNotification } = require('../utils/slack');
 const { sendMSTeamsNotification } = require('../utils/msteams');
 const { renameThemeWithVersion } = require('../utils/versioning');
+const { getLatestReleaseVersion } = require('../utils/github-release');
 
 /**
  * Execute production deployment
@@ -179,12 +180,26 @@ async function productionDeploy(config) {
     if (config.versioning.enabled) {
       core.startGroup('🏷️ Updating version tag');
 
+      let startVersion = config.versioning.start;
+
+      // If using GitHub release as version source, get latest release version
+      if (config.versioning.source === 'release') {
+        core.info('Using GitHub release version as source');
+        const releaseVersion = await getLatestReleaseVersion(config.secrets.githubToken);
+        if (releaseVersion) {
+          startVersion = releaseVersion;
+          core.info(`Latest GitHub release version: ${releaseVersion}`);
+        } else {
+          core.warning('No GitHub releases found, falling back to theme name version');
+        }
+      }
+
       const versionResult = await renameThemeWithVersion(
         config.secrets.themeToken,
         config.store,
         productionTheme.id.toString(),
         config.versioning.format,
-        config.versioning.start
+        startVersion
       );
 
       newVersion = versionResult.version;
