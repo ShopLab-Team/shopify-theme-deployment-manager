@@ -146,20 +146,30 @@ async function productionDeploy(config) {
         force: true,
       });
 
-      // Phase B: Push only en.default.json and en.default.schema.json
-      core.info('Phase B: Pushing default locale and schema...');
+      // Phase B: Push only en.default.json and en.default.schema.json (optional)
+      if (config.deploy.pushDefaultLocale) {
+        core.info('Phase B: Pushing default locale and schema...');
 
-      await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        only: ['locales/en.default.json', 'locales/en.default.schema.json'],
-        nodelete: true,
-        allowLive: true, // Always allow live push in production mode
-        force: true,
-      });
+        await pushThemeFiles(
+          config.secrets.themeToken,
+          config.store,
+          productionTheme.id.toString(),
+          {
+            only: ['locales/en.default.json', 'locales/en.default.schema.json'],
+            nodelete: true,
+            allowLive: true, // Always allow live push in production mode
+            force: true,
+          }
+        );
+      } else {
+        core.info('Phase B: Skipped (deploy_push_default_locale is disabled)');
+      }
     } else {
-      // Push everything
+      // Push everything, but respect push_extra_ignore patterns
       core.info('Pushing all files to production...');
 
       await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
+        ignore: config.push.extraIgnore || [],
         nodelete: config.push.nodelete,
         allowLive: true, // Always allow live push in production mode
         force: true,

@@ -100,6 +100,7 @@ function getConfig() {
     // Deploy configuration
     deploy: {
       ignoreJsonOnProd: parseBoolean(getInput('deploy_ignore_json_on_prod')),
+      pushDefaultLocale: parseBoolean(getInput('deploy_push_default_locale')),
       allowLivePush: parseBoolean(getInput('deploy_allow_live_push')),
     },
 

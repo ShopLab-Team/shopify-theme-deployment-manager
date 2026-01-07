@@ -103,7 +103,12 @@ inputs:
   
   # Deploy Configuration
   deploy_ignore_json_on_prod:
-    description: 'Ignore JSON files on production deploy'
+    description: 'Ignore JSON files on production deploy (except default locale in Phase B)'
+    required: false
+    default: 'true'
+  
+  deploy_push_default_locale:
+    description: 'Push default locale (en.default.json/schema.json) in Phase B when ignoring JSON'
     required: false
     default: 'true'
   
@@ -262,6 +267,7 @@ runs:
         INPUT_BACKUP_PREFIX: ${{ inputs.backup_prefix }}
         INPUT_BACKUP_TIMEZONE: ${{ inputs.backup_timezone }}
         INPUT_DEPLOY_IGNORE_JSON_ON_PROD: ${{ inputs.deploy_ignore_json_on_prod }}
+        INPUT_DEPLOY_PUSH_DEFAULT_LOCALE: ${{ inputs.deploy_push_default_locale }}
         INPUT_DEPLOY_ALLOW_LIVE_PUSH: ${{ inputs.deploy_allow_live_push }}
         INPUT_VERSIONING_ENABLED: ${{ inputs.versioning_enabled }}
         INPUT_VERSIONING_FORMAT: ${{ inputs.versioning_format }}

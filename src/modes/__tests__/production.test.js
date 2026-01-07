@@ -46,6 +46,7 @@ describe('production', () => {
       },
       deploy: {
         ignoreJsonOnProd: true,
+        pushDefaultLocale: true,
         allowLivePush: true,
       },
       push: {
@@ -299,6 +300,70 @@ describe('production', () => {
       await productionDeploy(configNoSlack);
 
       expect(sendSlackNotification).not.toHaveBeenCalled();
+    });
+
+    it('should skip Phase B when deploy_push_default_locale is false', async () => {
+      const configNoDefaultLocale = {
+        ...mockConfig,
+        deploy: {
+          ...mockConfig.deploy,
+          pushDefaultLocale: false,
+        },
+      };
+
+      const mockProductionTheme = { id: 123456, name: 'PRODUCTION' };
+      getThemeById.mockResolvedValue(mockProductionTheme);
+      createBackup.mockResolvedValue({ id: 999999 });
+      cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
+      ensureThemeCapacity.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
+      renameThemeWithVersion.mockResolvedValue({
+        version: '1.0.0',
+        name: 'PRODUCTION [1.0.0]',
+      });
+
+      await productionDeploy(configNoDefaultLocale);
+
+      // Should only call pushThemeFiles once (Phase A only)
+      expect(pushThemeFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('should respect push_extra_ignore when ignoreJsonOnProd is false', async () => {
+      const configNoIgnoreJson = {
+        ...mockConfig,
+        deploy: {
+          ...mockConfig.deploy,
+          ignoreJsonOnProd: false,
+        },
+        push: {
+          ...mockConfig.push,
+          extraIgnore: ['locales/*.json', 'templates/product.json'],
+        },
+      };
+
+      const mockProductionTheme = { id: 123456, name: 'PRODUCTION' };
+      getThemeById.mockResolvedValue(mockProductionTheme);
+      createBackup.mockResolvedValue({ id: 999999 });
+      cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
+      ensureThemeCapacity.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
+      renameThemeWithVersion.mockResolvedValue({
+        version: '1.0.0',
+        name: 'PRODUCTION [1.0.0]',
+      });
+
+      await productionDeploy(configNoIgnoreJson);
+
+      // Should call pushThemeFiles once with push_extra_ignore patterns
+      expect(pushThemeFiles).toHaveBeenCalledTimes(1);
+      expect(pushThemeFiles).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          ignore: ['locales/*.json', 'templates/product.json'],
+        })
+      );
     });
 
     it('should use versioning_start for theme with no version', async () => {
