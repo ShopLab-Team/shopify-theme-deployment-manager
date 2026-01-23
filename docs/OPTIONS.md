@@ -157,10 +157,28 @@ This document provides a comprehensive reference for all configuration options a
 ## Deploy Configuration
 
 ### `deploy_ignore_json_on_prod`
-- **Description**: Ignore JSON files during production deployment
+- **Description**: Ignore JSON files during production deployment (except Phase B default locale)
 - **Default**: `true`
 - **Options**: `true` or `false`
+- **Behavior**:
+  - `true`: Phase A ignores all JSON, Phase B pushes default locale (if enabled)
+  - `false`: Pushes all files, respects `push_extra_ignore` patterns
 - **Use Case**: Preserve merchant customizations in production
+
+### `deploy_push_default_locale`
+- **Description**: Push default locale files in Phase B when `deploy_ignore_json_on_prod: true`
+- **Default**: `true`
+- **Options**: `true` or `false`
+- **Files Affected**: `locales/en.default.json` and `locales/en.default.schema.json`
+- **Behavior**:
+  - `true`: Phase B pushes default locale files (overrides ignore patterns)
+  - `false`: Phase B is skipped, NO locale files are pushed
+- **Use Case**: Set to `false` if you want to preserve each store's own default locale
+- **Example**: To prevent pushing `en.default.json` entirely:
+  ```yaml
+  deploy_ignore_json_on_prod: true
+  deploy_push_default_locale: false
+  ```
 
 ### `deploy_allow_live_push`
 - **Description**: Allow pushing directly to live/published themes
@@ -181,15 +199,46 @@ This document provides a comprehensive reference for all configuration options a
 - **Description**: Version number format to use
 - **Default**: `X.XX.XX`
 - **Options**: 
-  - `X.X.X` - Single digits (e.g., `1.2.3`, `10.20.30`)
-  - `X.XX.XX` - Zero-padded double digits (e.g., `1.02.03`, `10.20.30`)
-- **Rollover**: Both formats support automatic rollover at 100:
+  - `X.X.X` - No padding (e.g., `1.2.3`, `10.20.30`)
+  - `X.X.XX` - Patch padding only (e.g., `1.2.03`, `10.20.30`)
+  - `X.XX.XX` - Full padding (e.g., `1.02.03`, `10.20.30`)
+- **Rollover**: All formats support automatic rollover at 100:
   - 100 patches → 1 minor version
   - 100 minors → 1 major version
 - **Examples**:
   - `X.X.X`: `[1.2.3]` → `[1.2.4]` → ... → `[1.2.99]` → `[1.3.0]`
+  - `X.X.XX`: `[1.2.03]` → `[1.2.04]` → ... → `[1.2.99]` → `[1.3.00]`
   - `X.XX.XX`: `[1.02.03]` → `[1.02.04]` → ... → `[1.02.99]` → `[1.03.00]`
   - Maximum capacity: 1 million deployments before reset
+
+### `versioning_source`
+- **Description**: Source for version tracking
+- **Default**: `theme`
+- **Options**: 
+  - `theme` - Use theme name version and auto-increment (default behavior)
+  - `release` - Sync theme version with latest GitHub release tag
+- **Use Cases**:
+  - `theme`: Independent theme versioning, auto-increments each deployment
+  - `release`: Keep theme version synchronized with your GitHub releases
+- **Examples**:
+  - `theme` mode: `PRODUCTION [1.0.4]` → `PRODUCTION [1.0.5]`
+  - `release` mode with tag `v1.0.9`: `PRODUCTION [1.0.4]` → `PRODUCTION [1.0.9]`
+- **Note**: `release` mode requires `GITHUB_TOKEN` in workflow env
+
+### `versioning_start`
+- **Description**: Custom starting version for themes with no version
+- **Default**: None (uses `0.00.01` or format-specific default)
+- **Format**: Version string (e.g., `3.0.0`, `5.10.20`)
+- **Use Cases**:
+  - Start versioning from a specific number
+  - Migrate from another versioning system
+- **Behavior**:
+  - Only used with `versioning_source: theme`
+  - Only applied if theme has no existing version
+  - If theme has version, continues from existing version
+- **Examples**:
+  - Theme `PRODUCTION` + `versioning_start: 3.0.0` → `PRODUCTION [3.0.1]`
+  - Theme `PRODUCTION [5.0.0]` + `versioning_start: 3.0.0` → `PRODUCTION [5.0.1]` (ignores start)
 
 ## Sync Configuration
 
