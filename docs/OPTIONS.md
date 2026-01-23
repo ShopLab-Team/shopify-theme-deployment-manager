@@ -330,7 +330,9 @@ Required and optional environment variables for the action:
 |----------|-------------|---------|
 | `SHOPIFY_STORE_URL` | Store domain (alternative to `store` input) | - |
 | `PRODUCTION_THEME_ID` | ID of production theme | Auto-detect live theme |
-| `SLACK_WEBHOOK_URL` | Slack webhook for notifications | - |
+| `GITHUB_TOKEN` | GitHub token for PR creation and release versioning | Required for `sync-live` PR mode and `versioning_source: release` |
+| `SLACK_WEBHOOK_URL` | Slack webhook for notifications | Optional - for Slack notifications |
+| `MS_TEAMS_WEBHOOK_URL` | MS Teams webhook for notifications | Optional - for MS Teams notifications |
 | `SYNC_JSON_ON_STAGING` | Override `json_sync_on_staging` setting | `true` |
 
 ## Outputs
