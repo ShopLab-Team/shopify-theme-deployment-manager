@@ -15,6 +15,11 @@ inputs:
     description: 'Shopify store domain (e.g., your-store.myshopify.com or prefix). Can also be set as SHOPIFY_STORE_URL secret.'
     required: false
   
+  theme_path:
+    description: 'Path to theme directory (e.g., "dist" if theme is in dist folder)'
+    required: false
+    default: '.'
+  
   # Branch Configuration
   branch_staging:
     description: 'Branch name for staging deployments'
@@ -251,6 +256,7 @@ runs:
       env:
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_STORE: ${{ inputs.store }}
+        INPUT_THEME_PATH: ${{ inputs.theme_path }}
         INPUT_BRANCH_STAGING: ${{ inputs.branch_staging }}
         INPUT_BRANCH_PRODUCTION: ${{ inputs.branch_production }}
         INPUT_BUILD_ENABLED: ${{ inputs.build_enabled }}

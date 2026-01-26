@@ -386,7 +386,17 @@ describe('shopify-cli', () => {
 
       expect(exec.exec).toHaveBeenCalledWith(
         'shopify',
-        ['theme', 'push', '--store', 'test-store.myshopify.com', '--theme', '123456789', '--json'],
+        [
+          'theme',
+          'push',
+          '--store',
+          'test-store.myshopify.com',
+          '--theme',
+          '123456789',
+          '--path',
+          '.',
+          '--json',
+        ],
         expect.any(Object)
       );
     });
@@ -408,6 +418,8 @@ describe('shopify-cli', () => {
           'test-store.myshopify.com',
           '--theme',
           '123456789',
+          '--path',
+          '.',
           '--ignore',
           'config/settings_data.json',
           '--ignore',
@@ -437,6 +449,8 @@ describe('shopify-cli', () => {
           'test-store.myshopify.com',
           '--theme',
           '123456789',
+          '--path',
+          '.',
           '--only',
           'locales/en.default.json',
           '--only',
@@ -445,6 +459,28 @@ describe('shopify-cli', () => {
           '--allow-live',
           '--json',
         ]),
+        expect.any(Object)
+      );
+    });
+
+    it('should push from custom theme path', async () => {
+      exec.exec.mockResolvedValue(0);
+
+      await pushThemeFiles('test-token', 'test-store', '123456', {}, 'dist');
+
+      expect(exec.exec).toHaveBeenCalledWith(
+        'shopify',
+        [
+          'theme',
+          'push',
+          '--store',
+          'test-store.myshopify.com',
+          '--theme',
+          '123456',
+          '--path',
+          'dist',
+          '--json',
+        ],
         expect.any(Object)
       );
     });

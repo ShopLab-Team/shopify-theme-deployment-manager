@@ -335,12 +335,13 @@ async function pullThemeFiles(
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
  * @param {Object} options - Push options
+ * @param {string} themePath - Path to theme directory (default: '.')
  * @returns {Promise<void>}
  */
-async function pushThemeFiles(token, store, themeId, options = {}) {
+async function pushThemeFiles(token, store, themeId, options = {}, themePath = '.') {
   const storeDomain = normalizeStore(store);
 
-  const args = ['theme', 'push', '--store', storeDomain, '--theme', themeId];
+  const args = ['theme', 'push', '--store', storeDomain, '--theme', themeId, '--path', themePath];
 
   // Add ignore patterns
   if (options.ignore && options.ignore.length > 0) {

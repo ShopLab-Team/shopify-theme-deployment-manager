@@ -34,6 +34,7 @@ describe('staging', () => {
     const mockConfig = {
       mode: 'staging',
       store: 'test-store',
+      themePath: '.',
       dryRun: false,
       build: {
         enabled: true,
@@ -110,7 +111,8 @@ describe('staging', () => {
         expect.objectContaining({
           ignore: [],
           nodelete: false,
-        })
+        }),
+        '.'
       );
       expect(sendSlackNotification).toHaveBeenCalled();
 
@@ -252,7 +254,8 @@ describe('staging', () => {
         expect.any(String),
         expect.objectContaining({
           ignore: ['assets/*.map', 'node_modules/**'],
-        })
+        }),
+        '.'
       );
     });
 
@@ -282,7 +285,8 @@ describe('staging', () => {
         expect.any(String),
         expect.objectContaining({
           nodelete: true,
-        })
+        }),
+        '.'
       );
     });
 

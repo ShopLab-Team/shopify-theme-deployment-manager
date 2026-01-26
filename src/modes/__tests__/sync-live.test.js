@@ -32,6 +32,7 @@ describe('sync-live', () => {
       config = {
         mode: 'sync-live',
         store: 'test-store',
+        themePath: '.',
         dryRun: false,
         sync: {
           files: 'custom',

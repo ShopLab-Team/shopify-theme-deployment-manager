@@ -57,6 +57,7 @@ function getConfig() {
     mode: getInput('mode'),
     // Store can be provided as input or secret (secret takes precedence)
     store: process.env.SHOPIFY_STORE_URL || getInput('store'),
+    themePath: getInput('theme_path') || '.',
     dryRun: parseBoolean(getInput('dry_run')),
 
     // Branch configuration

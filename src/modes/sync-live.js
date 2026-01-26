@@ -202,7 +202,7 @@ async function syncLive(config) {
       config.store,
       liveTheme.id.toString(),
       syncGlobs,
-      '.',
+      config.themePath,
       [] // Don't pass ignore patterns for pull - they don't work
     );
     core.info('Files pulled from live theme');

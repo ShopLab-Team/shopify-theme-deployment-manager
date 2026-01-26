@@ -37,6 +37,23 @@ This document provides a comprehensive reference for all configuration options a
 - **Example**: `store: my-store.myshopify.com`
 - **Security Note**: Consider using `SHOPIFY_STORE_URL` secret instead for better security
 
+### `theme_path`
+- **Description**: Path to theme directory for Shopify CLI operations
+- **Default**: `.` (root directory)
+- **Use Case**: When your theme files are in a subdirectory (e.g., compiled to `dist` folder)
+- **Example**: `theme_path: dist`
+- **How it works**:
+  - Build commands run from `build_cwd` (if `build_enabled: true`)
+  - Shopify CLI upload/download operates on files in `theme_path`
+  - Example: Build in root (`.`), upload from `dist` folder
+- **Example Configuration**:
+  ```yaml
+  build_enabled: true
+  build_cwd: .              # Run build commands from root
+  build_command: yarn build  # Compiles to dist/
+  theme_path: dist          # Upload theme from dist/ folder
+  ```
+
 ## Branch Configuration
 
 ### `branch_staging`

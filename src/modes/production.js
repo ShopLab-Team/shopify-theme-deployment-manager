@@ -139,12 +139,18 @@ async function productionDeploy(config) {
         'locales/*.json',
       ];
 
-      await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        ignore: ignorePatterns,
-        nodelete: config.push.nodelete,
-        allowLive: true, // Always allow live push in production mode
-        force: true,
-      });
+      await pushThemeFiles(
+        config.secrets.themeToken,
+        config.store,
+        productionTheme.id.toString(),
+        {
+          ignore: ignorePatterns,
+          nodelete: config.push.nodelete,
+          allowLive: true, // Always allow live push in production mode
+          force: true,
+        },
+        config.themePath
+      );
 
       // Phase B: Push only en.default.json and en.default.schema.json (optional)
       if (config.deploy.pushDefaultLocale) {
@@ -159,7 +165,8 @@ async function productionDeploy(config) {
             nodelete: true,
             allowLive: true, // Always allow live push in production mode
             force: true,
-          }
+          },
+          config.themePath
         );
       } else {
         core.info('Phase B: Skipped (deploy_push_default_locale is disabled)');
@@ -168,12 +175,18 @@ async function productionDeploy(config) {
       // Push everything, but respect push_extra_ignore patterns
       core.info('Pushing all files to production...');
 
-      await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        ignore: config.push.extraIgnore || [],
-        nodelete: config.push.nodelete,
-        allowLive: true, // Always allow live push in production mode
-        force: true,
-      });
+      await pushThemeFiles(
+        config.secrets.themeToken,
+        config.store,
+        productionTheme.id.toString(),
+        {
+          ignore: config.push.extraIgnore || [],
+          nodelete: config.push.nodelete,
+          allowLive: true, // Always allow live push in production mode
+          force: true,
+        },
+        config.themePath
+      );
     }
 
     core.info('Production deployment complete');

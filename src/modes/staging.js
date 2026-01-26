@@ -118,7 +118,7 @@ async function stagingDeploy(config) {
         config.store,
         themeIdString,
         config.json.pullGlobs,
-        '.'
+        config.themePath
       );
       core.info(
         `JSON files pulled from theme ${sourceTheme.name || sourceTheme} (ID: ${themeIdString})`
@@ -138,7 +138,8 @@ async function stagingDeploy(config) {
       config.secrets.themeToken,
       config.store,
       config.secrets.stagingThemeId,
-      pushOptions
+      pushOptions,
+      config.themePath
     );
     core.info('Theme files pushed to staging');
     core.endGroup();

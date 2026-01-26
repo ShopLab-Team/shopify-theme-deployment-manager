@@ -32,6 +32,7 @@ describe('production', () => {
     const mockConfig = {
       mode: 'production',
       store: 'test-store',
+      themePath: '.',
       dryRun: false,
       backup: {
         enabled: true,
@@ -250,7 +251,8 @@ describe('production', () => {
             'sections/*.json',
             'config/settings_data.json',
           ]),
-        })
+        }),
+        '.'
       );
 
       // Second call should only push locales/en.default.json and locales/en.default.schema.json
@@ -261,7 +263,8 @@ describe('production', () => {
         expect.any(String),
         expect.objectContaining({
           only: ['locales/en.default.json', 'locales/en.default.schema.json'],
-        })
+        }),
+        '.'
       );
     });
 
@@ -362,7 +365,8 @@ describe('production', () => {
         expect.any(String),
         expect.objectContaining({
           ignore: ['locales/*.json', 'templates/product.json'],
-        })
+        }),
+        '.'
       );
     });
 

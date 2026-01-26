@@ -37618,12 +37618,18 @@ async function productionDeploy(config) {
         'locales/*.json',
       ];
 
-      await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        ignore: ignorePatterns,
-        nodelete: config.push.nodelete,
-        allowLive: true, // Always allow live push in production mode
-        force: true,
-      });
+      await pushThemeFiles(
+        config.secrets.themeToken,
+        config.store,
+        productionTheme.id.toString(),
+        {
+          ignore: ignorePatterns,
+          nodelete: config.push.nodelete,
+          allowLive: true, // Always allow live push in production mode
+          force: true,
+        },
+        config.themePath
+      );
 
       // Phase B: Push only en.default.json and en.default.schema.json (optional)
       if (config.deploy.pushDefaultLocale) {
@@ -37638,7 +37644,8 @@ async function productionDeploy(config) {
             nodelete: true,
             allowLive: true, // Always allow live push in production mode
             force: true,
-          }
+          },
+          config.themePath
         );
       } else {
         core.info('Phase B: Skipped (deploy_push_default_locale is disabled)');
@@ -37647,12 +37654,18 @@ async function productionDeploy(config) {
       // Push everything, but respect push_extra_ignore patterns
       core.info('Pushing all files to production...');
 
-      await pushThemeFiles(config.secrets.themeToken, config.store, productionTheme.id.toString(), {
-        ignore: config.push.extraIgnore || [],
-        nodelete: config.push.nodelete,
-        allowLive: true, // Always allow live push in production mode
-        force: true,
-      });
+      await pushThemeFiles(
+        config.secrets.themeToken,
+        config.store,
+        productionTheme.id.toString(),
+        {
+          ignore: config.push.extraIgnore || [],
+          nodelete: config.push.nodelete,
+          allowLive: true, // Always allow live push in production mode
+          force: true,
+        },
+        config.themePath
+      );
     }
 
     core.info('Production deployment complete');
@@ -37920,7 +37933,7 @@ async function stagingDeploy(config) {
         config.store,
         themeIdString,
         config.json.pullGlobs,
-        '.'
+        config.themePath
       );
       core.info(
         `JSON files pulled from theme ${sourceTheme.name || sourceTheme} (ID: ${themeIdString})`
@@ -37940,7 +37953,8 @@ async function stagingDeploy(config) {
       config.secrets.themeToken,
       config.store,
       config.secrets.stagingThemeId,
-      pushOptions
+      pushOptions,
+      config.themePath
     );
     core.info('Theme files pushed to staging');
     core.endGroup();
@@ -38233,7 +38247,7 @@ async function syncLive(config) {
       config.store,
       liveTheme.id.toString(),
       syncGlobs,
-      '.',
+      config.themePath,
       [] // Don't pass ignore patterns for pull - they don't work
     );
     core.info('Files pulled from live theme');
@@ -38971,6 +38985,7 @@ function getConfig() {
     mode: getInput('mode'),
     // Store can be provided as input or secret (secret takes precedence)
     store: process.env.SHOPIFY_STORE_URL || getInput('store'),
+    themePath: getInput('theme_path') || '.',
     dryRun: parseBoolean(getInput('dry_run')),
 
     // Branch configuration
@@ -40462,12 +40477,13 @@ async function pullThemeFiles(
  * @param {string} store - Store domain
  * @param {string} themeId - Theme ID
  * @param {Object} options - Push options
+ * @param {string} themePath - Path to theme directory (default: '.')
  * @returns {Promise<void>}
  */
-async function pushThemeFiles(token, store, themeId, options = {}) {
+async function pushThemeFiles(token, store, themeId, options = {}, themePath = '.') {
   const storeDomain = normalizeStore(store);
 
-  const args = ['theme', 'push', '--store', storeDomain, '--theme', themeId];
+  const args = ['theme', 'push', '--store', storeDomain, '--theme', themeId, '--path', themePath];
 
   // Add ignore patterns
   if (options.ignore && options.ignore.length > 0) {
