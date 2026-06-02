@@ -77,8 +77,8 @@ This document provides a comprehensive reference for all configuration options a
 
 ### `build_node_version`
 - **Description**: Node.js version to use for build
-- **Default**: `20.x`
-- **Format**: Node version string (e.g., `18.x`, `20.x`, `20.15.0`)
+- **Default**: `22.x`
+- **Format**: Node version string (e.g., `20.x`, `22.x`, `22.11.0`)
 - **Note**: Will use `.nvmrc` if present in repository
 
 ### `build_package_manager`

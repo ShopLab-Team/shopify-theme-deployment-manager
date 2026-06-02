@@ -6,7 +6,7 @@ Thank you for your interest in contributing to this GitHub Action!
 
 ### Prerequisites
 
-- Node.js 20.x or higher
+- Node.js 22.x or higher
 - npm 8.x or higher
 - Git
 

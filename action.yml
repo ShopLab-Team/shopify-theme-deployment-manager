@@ -40,7 +40,7 @@ inputs:
   build_node_version:
     description: 'Node version to use'
     required: false
-    default: '20.x'
+    default: '22.x'
   
   build_package_manager:
     description: 'Package manager: npm, yarn, or pnpm'

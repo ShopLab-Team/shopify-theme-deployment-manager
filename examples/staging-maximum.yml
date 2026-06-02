@@ -50,7 +50,7 @@ jobs:
           
           # Build Configuration
           build_enabled: true  # Enable build step (default: true)
-          build_node_version: 20.x  # Node version (default: 20.x)
+          build_node_version: 22.x  # Node version (default: 22.x)
           build_package_manager: npm  # npm, yarn, or pnpm (default: npm)
           build_command: |  # Custom build command
             npm ci --production=false
