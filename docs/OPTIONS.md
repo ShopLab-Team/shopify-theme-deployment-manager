@@ -128,8 +128,9 @@ This document provides a comprehensive reference for all configuration options a
 ## Push Configuration
 
 ### `push_extra_ignore`
-- **Description**: Additional glob patterns to ignore during theme push
+- **Description**: Additional glob patterns to ignore during theme push (staging and production, in both production modes). Ignored files are neither uploaded nor deleted.
 - **Default**: Empty
+- **Note**: Production always ignores `blocks/ai_gen_block_*` (blocks Shopify's AI generates in the theme editor), so they are never uploaded, overwritten or deleted on production.
 - **Format**: Newline-separated glob patterns
 - **Example**:
   ```yaml
@@ -178,7 +179,7 @@ This document provides a comprehensive reference for all configuration options a
 - **Default**: `true`
 - **Options**: `true` or `false`
 - **Behavior**:
-  - `true`: Phase A ignores all JSON, Phase B pushes default locale (if enabled)
+  - `true`: Phase A ignores all JSON plus `push_extra_ignore` patterns, Phase B pushes default locale (if enabled)
   - `false`: Pushes all files, respects `push_extra_ignore` patterns
 - **Use Case**: Preserve merchant customizations in production
 

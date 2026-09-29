@@ -364,7 +364,34 @@ describe('production', () => {
         expect.any(String),
         expect.any(String),
         expect.objectContaining({
-          ignore: ['locales/*.json', 'templates/product.json'],
+          ignore: ['blocks/ai_gen_block_*', 'locales/*.json', 'templates/product.json'],
+        }),
+        '.'
+      );
+    });
+
+    it('should apply push_extra_ignore and skip AI-generated blocks when ignoreJsonOnProd is true', async () => {
+      const configExtraIgnore = {
+        ...mockConfig,
+        push: { ...mockConfig.push, extraIgnore: ['docs/**'] },
+      };
+
+      getThemeById.mockResolvedValue({ id: 123456, name: 'PRODUCTION' });
+      createBackup.mockResolvedValue({ id: 999999 });
+      cleanupBackups.mockResolvedValue({ deleted: [], remaining: [] });
+      ensureThemeCapacity.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 10 });
+      renameThemeWithVersion.mockResolvedValue({ version: '1.0.0', name: 'PRODUCTION [1.0.0]' });
+
+      await productionDeploy(configExtraIgnore);
+
+      expect(pushThemeFiles).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          ignore: expect.arrayContaining(['templates/*.json', 'blocks/ai_gen_block_*', 'docs/**']),
         }),
         '.'
       );
