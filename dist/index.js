@@ -37954,6 +37954,7 @@ async function stagingDeploy(config) {
     const pushOptions = {
       ignore: config.push.extraIgnore || [],
       nodelete: config.push.nodelete,
+      allowLive: config.deploy.allowLivePush,
       force: true,
     };
 
