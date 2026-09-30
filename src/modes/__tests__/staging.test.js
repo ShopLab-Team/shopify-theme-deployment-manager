@@ -50,6 +50,9 @@ describe('staging', () => {
         extraIgnore: [],
         nodelete: false,
       },
+      deploy: {
+        allowLivePush: false,
+      },
       secrets: {
         themeToken: 'test-token',
         stagingThemeId: '987654',
@@ -285,6 +288,37 @@ describe('staging', () => {
         expect.any(String),
         expect.objectContaining({
           nodelete: true,
+        }),
+        '.'
+      );
+    });
+
+    it('should apply allowLive option when live push is allowed', async () => {
+      const configWithLivePush = {
+        ...mockConfig,
+        deploy: {
+          ...mockConfig.deploy,
+          allowLivePush: true,
+        },
+      };
+
+      const mockStagingTheme = { id: 987654, name: 'STAGING' };
+      const mockLiveTheme = { id: 123456, name: 'Live Theme' };
+
+      ensureThemeExists.mockResolvedValue(mockStagingTheme);
+      getLiveTheme.mockResolvedValue(mockLiveTheme);
+      buildAssets.mockResolvedValue();
+      pullThemeFiles.mockResolvedValue();
+      pushThemeFiles.mockResolvedValue({ uploadedFiles: 20, theme: mockStagingTheme });
+
+      await stagingDeploy(configWithLivePush);
+
+      expect(pushThemeFiles).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          allowLive: true,
         }),
         '.'
       );
