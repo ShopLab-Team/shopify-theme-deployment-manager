@@ -3,7 +3,7 @@ const exec = require('@actions/exec');
 const { format, utcToZonedTime } = require('date-fns-tz');
 const { normalizeStore } = require('./validators');
 const { pollUntil } = require('./retry');
-const { getLiveTheme, listThemes, getThemeById } = require('./shopify-cli');
+const { getLiveTheme, listThemes, getThemeById, normalizeTheme } = require('./shopify-cli');
 
 /**
  * Create a backup of the current live theme
@@ -131,7 +131,7 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
     try {
       const result = JSON.parse(output);
       if (result.theme) {
-        newTheme = result.theme;
+        newTheme = normalizeTheme(result.theme);
       }
     } catch (parseError) {
       core.debug(`Failed to parse JSON output: ${parseError.message}`);
