@@ -9,6 +9,7 @@ const {
   ensureThemeExists,
   pullThemeFiles,
   pushThemeFiles,
+  runThemePush,
 } = require('../shopify-cli');
 
 // Mock dependencies
@@ -396,6 +397,53 @@ describe('shopify-cli', () => {
           '*.map',
         ],
         expect.any(Object)
+      );
+    });
+  });
+
+  describe('runThemePush', () => {
+    const args = ['theme', 'push', '--theme', '123', '--json'];
+
+    const mockPush = (exitCode, stdout = '', stderr = '') => {
+      exec.exec.mockImplementation((cmd, cmdArgs, options) => {
+        if (stdout) options.listeners.stdout(Buffer.from(stdout));
+        if (stderr) options.listeners.stderr(Buffer.from(stderr));
+        return Promise.resolve(exitCode);
+      });
+    };
+
+    it('should return the parsed result on success', async () => {
+      const result = { status: 'success', changed: true, theme: { id: '123' }, issues: [] };
+      mockPush(0, JSON.stringify(result));
+
+      await expect(runThemePush(args)).resolves.toEqual(result);
+      expect(exec.exec).toHaveBeenCalledWith(
+        'shopify',
+        args,
+        expect.objectContaining({ ignoreReturnCode: true })
+      );
+    });
+
+    it('should treat a partial push (CLI 5.x exit code 1) as success with warnings', async () => {
+      const result = {
+        status: 'partial',
+        changed: true,
+        theme: { id: '123', name: 'Backup' },
+        issues: [{ filePath: '/tmp/theme/sections/broken.liquid', message: 'Liquid syntax error' }],
+      };
+      mockPush(1, JSON.stringify(result));
+
+      await expect(runThemePush(args)).resolves.toEqual(result);
+      expect(core.warning).toHaveBeenCalledWith(
+        '/tmp/theme/sections/broken.liquid: Liquid syntax error'
+      );
+    });
+
+    it('should throw with CLI output when the push fails', async () => {
+      mockPush(1, '', 'Error: The theme could not be created');
+
+      await expect(runThemePush(args)).rejects.toThrow(
+        'Shopify CLI theme push failed with exit code 1:\nError: The theme could not be created'
       );
     });
   });

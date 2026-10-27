@@ -3,7 +3,13 @@ const exec = require('@actions/exec');
 const { format, utcToZonedTime } = require('date-fns-tz');
 const { normalizeStore } = require('./validators');
 const { pollUntil } = require('./retry');
-const { getLiveTheme, listThemes, getThemeById, normalizeTheme } = require('./shopify-cli');
+const {
+  getLiveTheme,
+  listThemes,
+  getThemeById,
+  normalizeTheme,
+  runThemePush,
+} = require('./shopify-cli');
 
 /**
  * Create a backup of the current live theme
@@ -95,9 +101,7 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
 
     // Step 3: Create new theme by pushing the downloaded files
     core.info(`Creating new theme: ${name}...`);
-    let output = '';
-    await exec.exec(
-      'shopify',
+    const result = await runThemePush(
       [
         'theme',
         'push',
@@ -112,11 +116,6 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
         '--json',
       ],
       {
-        listeners: {
-          stdout: (data) => {
-            output += data.toString();
-          },
-        },
         env: {
           ...process.env,
           SHOPIFY_CLI_THEME_TOKEN: token,
@@ -126,16 +125,8 @@ async function duplicateTheme(token, store, sourceThemeId, name) {
       }
     );
 
-    // Parse the output to get new theme info
-    let newTheme;
-    try {
-      const result = JSON.parse(output);
-      if (result.theme) {
-        newTheme = normalizeTheme(result.theme);
-      }
-    } catch (parseError) {
-      core.debug(`Failed to parse JSON output: ${parseError.message}`);
-    }
+    // Get new theme info from the push result
+    let newTheme = result && result.theme ? normalizeTheme(result.theme) : null;
 
     // If we couldn't get theme from output, find it by name
     if (!newTheme) {
