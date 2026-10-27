@@ -97,6 +97,28 @@ describe('shopify-cli', () => {
       expect(core.info).toHaveBeenCalledWith('Found 2 themes in store test-store.myshopify.com');
     });
 
+    it('should unwrap Shopify CLI 5.x output and convert string IDs', async () => {
+      const cliV5Output = {
+        themes: [
+          { id: '123456789', name: 'Dawn', role: 'live', processing: false },
+          { id: '987654321', name: 'Staging', role: 'unpublished', processing: false },
+        ],
+      };
+      exec.exec.mockImplementation((cmd, args, options) => {
+        if (options && options.listeners && options.listeners.stdout) {
+          options.listeners.stdout(Buffer.from(JSON.stringify(cliV5Output)));
+        }
+        return Promise.resolve(0);
+      });
+
+      const themes = await listThemes('test-token', 'test-store');
+      expect(themes).toEqual([
+        { id: 123456789, name: 'Dawn', role: 'live', processing: false },
+        { id: 987654321, name: 'Staging', role: 'unpublished', processing: false },
+      ]);
+      expect(core.info).toHaveBeenCalledWith('Found 2 themes in store test-store.myshopify.com');
+    });
+
     it('should handle empty theme list', async () => {
       exec.exec.mockImplementation((cmd, args, options) => {
         if (options && options.listeners && options.listeners.stdout) {

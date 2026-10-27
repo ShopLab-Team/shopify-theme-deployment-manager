@@ -15,6 +15,7 @@ jest.mock('@actions/core');
 jest.mock('../shopify-cli', () => ({
   getLiveTheme: jest.fn(),
   getThemeById: jest.fn(),
+  normalizeTheme: jest.fn((theme) => theme),
   listThemes: jest.fn(),
 }));
 

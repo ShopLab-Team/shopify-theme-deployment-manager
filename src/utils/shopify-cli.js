@@ -4,6 +4,20 @@ const { normalizeStore, isValidThemeId } = require('./validators');
 const { withRetry } = require('./retry');
 
 /**
+ * Normalize a theme object from Shopify CLI output.
+ * Shopify CLI 5.x returns theme IDs as decimal strings; convert them to numbers
+ * so ID comparisons behave consistently.
+ * @param {Object} theme - Theme object
+ * @returns {Object} Theme object with numeric ID
+ */
+function normalizeTheme(theme) {
+  if (theme && typeof theme.id === 'string' && /^\d+$/.test(theme.id)) {
+    return { ...theme, id: Number(theme.id) };
+  }
+  return theme;
+}
+
+/**
  * Install Shopify CLI globally
  * @returns {Promise<void>}
  */
@@ -12,7 +26,8 @@ async function installShopifyCLI() {
     core.info('Installing Shopify CLI...');
 
     // Install @shopify/cli globally (theme plugin is now bundled)
-    await exec.exec('npm', ['install', '-g', '@shopify/cli@latest']);
+    // Pinned to the 5.x major: output formats change between majors
+    await exec.exec('npm', ['install', '-g', '@shopify/cli@5']);
 
     // Verify installation
     const version = await getShopifyCLIVersion();
@@ -125,10 +140,17 @@ async function listThemes(token, store) {
       throw new Error(`Invalid JSON response from Shopify CLI: ${parseError.message}`);
     }
 
+    // Shopify CLI 5.x wraps the list as { themes: [...] }
+    if (themes && !Array.isArray(themes) && Array.isArray(themes.themes)) {
+      themes = themes.themes;
+    }
+
     // Validate themes array
     if (!Array.isArray(themes)) {
       throw new Error('Expected array of themes from Shopify CLI');
     }
+
+    themes = themes.map(normalizeTheme);
 
     // Log theme summary
     core.info(`Found ${themes.length} themes in store ${storeDomain}`);
@@ -452,7 +474,7 @@ async function getThemeInfo(token, store, themeId) {
     const themeInfo = JSON.parse(output);
 
     if (themeInfo && themeInfo.theme) {
-      const theme = themeInfo.theme;
+      const theme = normalizeTheme(themeInfo.theme);
       core.info(`Found theme via info: ${theme.name} (ID: ${theme.id})`);
       return theme;
     }
@@ -659,6 +681,7 @@ async function openTheme(token, store, themeId) {
 }
 
 module.exports = {
+  normalizeTheme,
   installShopifyCLI,
   getShopifyCLIVersion,
   validateThemeToken,
