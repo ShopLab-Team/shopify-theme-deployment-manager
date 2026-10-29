@@ -4,95 +4,6 @@ const { normalizeStore, isValidThemeId } = require('./validators');
 const { withRetry } = require('./retry');
 
 /**
- * Normalize a theme object from Shopify CLI output.
- * Shopify CLI 5.x returns theme IDs as decimal strings; convert them to numbers
- * so ID comparisons behave consistently.
- * @param {Object} theme - Theme object
- * @returns {Object} Theme object with numeric ID
- */
-function normalizeTheme(theme) {
-  if (theme && typeof theme.id === 'string' && /^\d+$/.test(theme.id)) {
-    return { ...theme, id: Number(theme.id) };
-  }
-  return theme;
-}
-
-/**
- * Parse the JSON result printed by `shopify theme push --json`
- * @param {string} output - Captured stdout
- * @returns {Object|null} Parsed result or null
- */
-function parsePushResult(output) {
-  const text = (output || '').trim();
-  if (!text) {
-    return null;
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start === -1 || end <= start) {
-      return null;
-    }
-    try {
-      return JSON.parse(text.slice(start, end + 1));
-    } catch {
-      return null;
-    }
-  }
-}
-
-/**
- * Run `shopify theme push` and interpret its result.
- * Shopify CLI 5.x exits with code 1 when some files fail to upload, even though
- * the push itself went through. Older versions exited 0 in that case, so treat
- * a partial push as a success and report the rejected files as warnings.
- * @param {Array<string>} args - CLI arguments (must include --json)
- * @param {Object} execOptions - Options passed to exec
- * @returns {Promise<Object|null>} Parsed push result, if any
- */
-async function runThemePush(args, execOptions = {}) {
-  let stdout = '';
-  let stderr = '';
-
-  const exitCode = await exec.exec('shopify', args, {
-    ...execOptions,
-    ignoreReturnCode: true,
-    listeners: {
-      stdout: (data) => {
-        stdout += data.toString();
-      },
-      stderr: (data) => {
-        stderr += data.toString();
-      },
-    },
-  });
-
-  const result = parsePushResult(stdout);
-
-  if (exitCode === 0) {
-    return result;
-  }
-
-  if (result && result.status === 'partial' && result.theme) {
-    const issues = Array.isArray(result.issues) ? result.issues : [];
-    core.warning(
-      `Theme push completed with ${issues.length} file error(s); all other files were uploaded`
-    );
-    for (const issue of issues) {
-      core.warning(`${issue.filePath}: ${issue.message}`);
-    }
-    return result;
-  }
-
-  const details = (stderr || stdout).trim().split('\n').slice(-20).join('\n');
-  throw new Error(
-    `Shopify CLI theme push failed with exit code ${exitCode}${details ? `:\n${details}` : ''}`
-  );
-}
-
-/**
  * Install Shopify CLI globally
  * @returns {Promise<void>}
  */
@@ -101,8 +12,8 @@ async function installShopifyCLI() {
     core.info('Installing Shopify CLI...');
 
     // Install @shopify/cli globally (theme plugin is now bundled)
-    // Pinned to the 5.x major: output formats change between majors
-    await exec.exec('npm', ['install', '-g', '@shopify/cli@5']);
+    // Pinned to the 4.x major: CLI 5.x changed output formats and exit codes
+    await exec.exec('npm', ['install', '-g', '@shopify/cli@4']);
 
     // Verify installation
     const version = await getShopifyCLIVersion();
@@ -215,17 +126,10 @@ async function listThemes(token, store) {
       throw new Error(`Invalid JSON response from Shopify CLI: ${parseError.message}`);
     }
 
-    // Shopify CLI 5.x wraps the list as { themes: [...] }
-    if (themes && !Array.isArray(themes) && Array.isArray(themes.themes)) {
-      themes = themes.themes;
-    }
-
     // Validate themes array
     if (!Array.isArray(themes)) {
       throw new Error('Expected array of themes from Shopify CLI');
     }
-
-    themes = themes.map(normalizeTheme);
 
     // Log theme summary
     core.info(`Found ${themes.length} themes in store ${storeDomain}`);
@@ -491,7 +395,7 @@ async function pushThemeFiles(token, store, themeId, options = {}, themePath = '
 
     await withRetry(
       async () => {
-        await runThemePush(args, execOptions);
+        await exec.exec('shopify', args, execOptions);
       },
       {
         retries: 3,
@@ -549,7 +453,7 @@ async function getThemeInfo(token, store, themeId) {
     const themeInfo = JSON.parse(output);
 
     if (themeInfo && themeInfo.theme) {
-      const theme = normalizeTheme(themeInfo.theme);
+      const theme = themeInfo.theme;
       core.info(`Found theme via info: ${theme.name} (ID: ${theme.id})`);
       return theme;
     }
@@ -756,9 +660,6 @@ async function openTheme(token, store, themeId) {
 }
 
 module.exports = {
-  normalizeTheme,
-  parsePushResult,
-  runThemePush,
   installShopifyCLI,
   getShopifyCLIVersion,
   validateThemeToken,
