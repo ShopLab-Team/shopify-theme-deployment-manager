@@ -14,7 +14,7 @@ permissions:
 jobs:
   test:
     name: Test Suite
-    runs-on: self-hosted
+    runs-on: [self-hosted, app-runner]
     # Security: Skip test on forked PRs to prevent secret exposure
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     
